@@ -48,3 +48,5 @@ install
 trace.json
 *.profraw
 
+lib/src/config.h
+

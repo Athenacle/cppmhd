@@ -1,0 +1,23 @@
+cmake_minimum_required(VERSION 3.4)
+
+set(PROJECT_NAME cppmhd)
+
+project(${PROJECT_NAME})
+
+set(MAJOR_VERSION 0)
+set(MINOR_VERSION 0)
+set(PATCH_VERSION 0)
+set(PROJECT_VERSION "${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}")
+
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/)
+set(CMAKE_CXX_STANDARD 11)
+
+include(CheckCompiler)
+include(Coverage)
+include(Dependency)
+
+option(BUILD_SHARED "Shared" ON)
+option(BUILD_STATIC "Static" ON)
+
+add_subdirectory(lib)
+add_subdirectory(examples)
