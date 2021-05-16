@@ -2,7 +2,7 @@ name: CPPMHD_CI
 
 on:
   push:
-    branches: [master, develop, feature/ci_fix, azure-pipelines]
+    branches: [master, develop, "feature/*"]
   pull_request:
     branches: [master]
 
