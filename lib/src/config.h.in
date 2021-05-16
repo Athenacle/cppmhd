@@ -1,0 +1,165 @@
+#ifndef CPPMHD_CONFIG_H_
+#define CPPMHD_CONFIG_H_
+
+#cmakedefine UNIX_HAVE_GETOPTLONG
+
+#cmakedefine UNIX_HAVE_PTHREAD_MUTEX
+
+#cmakedefine HAVE_PTHREAD_SIGMASK
+
+#cmakedefine UNIX_HAVE_DLOPEN
+
+#cmakedefine HAVE_BZERO
+
+#cmakedefine HAVE_BUILTIN_EXPECT
+
+#cmakedefine ON_UNIX
+
+#cmakedefine ON_WINDOWS
+
+#cmakedefine HAVE_CLOCK_REALTIME_COARSE
+
+#cmakedefine UNIX_HAVE_NANOSLEEP
+
+#cmakedefine ON_64BITS
+
+#cmakedefine UNIX_HAVE_GET_NPROCS
+
+#cmakedefine UNIX_HAVE_SETENV
+
+#cmakedefine UNIX_HAVE_MMAP
+
+#cmakedefine HAVE_UNIX_FORK_WAITPID
+
+#cmakedefine ENABLE_PCRE2_8
+
+#cmakedefine ENABLE_CARES
+
+#cmakedefine HAVE_INC_ARPA_INET
+
+#cmakedefine HAVE_INC_NETDB
+
+#cmakedefine HAVE_INC_WINSOCK
+
+#cmakedefine HAVE_SIGACTION
+
+#cmakedefine WIN_HAVE_INC_WINDNS
+
+#cmakedefine WIN_HAVE_DNS_QUERY_A
+
+//#ifdef NDEBUG
+
+#cmakedefine ENABLE_FMT_COMPILE
+
+#cmakedefine ENABLE_FMT_STRING
+
+#if !__cplusplus >= 201606L || !__cpp_if_constexpr
+
+#ifdef ENABLE_FMT_COMPILE
+#undef ENABLE_FMT_COMPILE
+#endif
+
+#endif
+
+#cmakedefine TEST_ENABLE_CURL
+
+#cmakedefine TEST_ENABLE_OPENSSL
+
+#define LOCALHOST "localhost"
+
+// clang-format off
+
+#cmakedefine DOMAIN_LENGTH @LOCAL_DOMAIN_LENGTH@
+
+#define PROJECT_LOCAL_DOMAIN "@LOCAL_DOMAIN@"
+
+#if !defined DOMAIN_LENGTH || DOMAIN_LENGTH == 0l
+#undef PROJECT_LOCAL_DOMAIN
+#endif
+
+#define PROJECT_GIT_SHA  "@GIT_SHA1@"
+
+#define PROJECT_NAME "@PROJECT_NAME@"
+
+#define PROJECT_MAJOR_VERSION @MAJOR_VERSION@
+
+#define PROJECT_MINOR_VERSION @MINOR_VERSION@
+
+#define PROJECT_PATCH_VERSION @PATCH_VERSION@
+
+#define PROJECT_VERSION_HEX ((((PROJECT_MAJOR_VERSION) << 16) | ((PROJECT_MINOR_VERSION) << 8) | ((PROJECT_PATCH_VERSION))))
+
+#define PROJECT_SERVER_HEADER PROJECT_NAME "/" PROJECT_VERSION_STRING
+
+#define PROJECT_VERSION_STRING "@PROJECT_VERSION@"
+
+#define SRC_ROOT "@SRC_ROOT@"
+
+// clang-format on
+
+#ifdef HAVE_BUILTIN_EXPECT
+#define likely(x) (__builtin_expect(!!(x), 1))
+#define unlikely(x) (__builtin_expect(!!(x), 0))
+#else
+#define likely(x) ((x))
+#define unlikely(x) ((x))
+#endif
+
+#if __cplusplus >= 201803L
+#if __has_cpp_attribute(likely)
+#define LIKELY [[likely]]
+#endif
+#endif
+
+#ifndef LIKELY
+#define LIKELY
+#endif
+
+#if defined __GNUC__ || defined __clang__
+#define GCC_COMPLIABLE
+#endif
+
+#ifdef GCC_COMPLIABLE
+#define FLATTEN __attribute__((flatten))
+#else
+#define FLATTEN
+#endif
+
+#if __cplusplus >= 200809L
+#if __has_cpp_attribute(noreturn)
+#define NORETURN [[noreturn]]
+#endif
+#endif
+
+#if !defined NORETURN && defined GCC_COMPLIABLE
+#define NORETURN __attribute__((noreturn))
+#endif
+
+#ifndef NORETURN
+#define NORETURN
+#endif
+
+#if __cplusplus >= 201603L
+#if __has_cpp_attribute(maybe_unused)
+#define MAYBE_UNUSED [[maybe_unused]]
+#endif
+#endif
+
+#if !defined MAYBE_UNUSED && defined GCC_COMPLIABLE
+#define MAYBE_UNUSED __attribute__((unused))
+#endif
+
+#ifndef MAYBE_UNUSED
+#define MAYBE_UNUSED
+#endif
+
+#ifdef ON_WINDOWS
+#define NOMINMAX
+
+#ifdef DELETE
+#undef DELETE
+#endif
+
+#endif
+
+#endif

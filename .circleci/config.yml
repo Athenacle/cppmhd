@@ -1,0 +1,50 @@
+version: 2.1
+workflows:
+  ContinuousIntegration:
+    jobs:
+      - buildAMD64:
+          filters:
+            branches:
+              only:
+                - /^master/
+                - /^develop/
+                - /^feature\/.*/
+      - buildARM:
+          filters:
+            branches:
+              only:
+                - /^master/
+                - /^develop/
+                - /^feature\/.*/
+
+
+jobs:
+  buildARM:
+    parallelism: 1
+    machine:
+      image: ubuntu-2004:202101-01
+    resource_class: arm.medium
+    steps:
+      - checkout
+      - run: sudo apt update
+      - run: sudo apt-get install -yq build-essential libmicrohttpd-dev libpcre2-dev libc-ares-dev libfmt-dev libcurl4-openssl-dev
+      - run: sudo apt-get install -yq libssl-dev pkg-config libgtest-dev libgmock-dev cmake
+      - run: mkdir ./build
+      - run: cmake -S . -B ./build  -DCMAKE_BUILD_TYPE:STRING=Debug  -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=OFF -DBUILD_SHARED=OFF -DBUILD_STATIC=ON  -G 'Unix Makefiles'
+      - run: cmake --build ./build --target all -j 3 --verbose
+      - run: cmake --build ./build --target run-unittest
+
+  buildAMD64:
+    parallelism: 1
+    docker:
+      - image: cimg/base:edge
+    resource_class: small
+    steps:
+      - checkout
+      - run: sudo apt update
+      - run: sudo apt-get install -yq build-essential libmicrohttpd-dev libpcre2-dev libc-ares-dev libfmt-dev libcurl4-openssl-dev
+      - run: sudo apt-get install -yq libssl-dev pkg-config libgtest-dev libgmock-dev cmake
+      - run: mkdir ./build && mkdir ./out
+      - run: cmake -S . -B ./build  -DCMAKE_BUILD_TYPE:STRING=Debug  -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=OFF -DBUILD_SHARED=OFF -DBUILD_STATIC=ON  -G 'Unix Makefiles'
+      - run: cmake --build ./build --target all -j 2 --verbose
+      - run: cmake --build ./build --target run-unittest
