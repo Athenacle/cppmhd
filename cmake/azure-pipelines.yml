@@ -2,13 +2,12 @@ pool:
   name: AzurePipelines-CI
 
 trigger:
-  - azure-pipelines
   - master
   - develop
   - feature/**
 
 variables:
-  RUN_ID: "0.0.0-ci-AzurePipelines-$(Build.SourceVersion)-$(Agent.OS)+$(Build.BuildNumber)"
+  RUN_ID: "0.0.1-ci-AzurePipelines-$(Build.SourceVersion)-$(Agent.OS)+$(Build.BuildNumber)"
 
 jobs:
   - job: macOS
