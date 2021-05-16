@@ -19,8 +19,6 @@ if (BUILD_STATIC)
     set_target_properties(staticlib PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
     set(LIBS ${LIBS} staticlib)
 
-    add_sanitizers(staticlib)
-
     if (ENABLE_FUZZER)
         target_compile_options(staticlib PUBLIC -fsanitize=fuzzer-no-link -gline-tables-only
                                                 -fsanitize-address-use-after-scope)
@@ -47,11 +45,15 @@ if (NOT TARGET cppmhd::lib)
 endif ()
 
 foreach (T IN LISTS LIBS)
-    target_include_directories(${T} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-                                           ${libpcre2-8_INCLUDEDIR} ${libcares_INCLUDEDIR})
+    add_sanitizers(${T})
+    #target_compile_definitions(${T} PUBLIC "-D$<$<CONFIG:Debug>:_DEBUG>"
+    #                                       "-D$<$<CONFIG:Release>:NDEBUG>")
+    #target_compile_options(${T} PUBLIC "$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Debug>>:/MTd>")
+    #target_link_options(${T} PUBLIC "$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Debug>>:/DEBUG:FULL>")
 
-    target_link_libraries(${T} PUBLIC ${libmicrohttpd_LIBRARIES} fmt::fmt Threads::Threads
-                                      ${libpcre2-8_LIBRARIES} ${libcares_LIBRARIES})
+    target_include_directories(${T} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(${T} PUBLIC MHD::MHD PCRE2::8 fmt::fmt Threads::Threads
+                                      "$<$<TARGET_EXISTS:CARES::CARES>:CARES::CARES>")
 endforeach ()
 
 set(SRC_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
@@ -61,9 +63,11 @@ if (LOCAL_DOMAIN)
     set(LOCAL_DOMAIN_LENGTH ${DOMAIN_LENGTH})
 endif ()
 
+option(BUILD_TESTS "Build unittest" OFF)
+
 if (BUILD_TESTS)
     find_package(CURL)
-    find_package(OpenSSL COMPONENTS Crypto)
+    find_package(OpenSSL QUIET COMPONENTS Crypto)
     set(TEST_ENABLE_OPENSSL ${OpenSSL_FOUND})
     set(TEST_ENABLE_CURL ${CURL_FOUND})
     add_subdirectory(test)

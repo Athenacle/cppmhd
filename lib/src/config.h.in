@@ -3,13 +3,9 @@
 
 #cmakedefine UNIX_HAVE_GETOPTLONG
 
-#cmakedefine UNIX_HAVE_PTHREAD_SPINLOCK
-
-#cmakedefine UNIX_HAVE_PTHREAD_COND
-
-#cmakedefine HAVE_PTHREAD_H
-
 #cmakedefine UNIX_HAVE_PTHREAD_MUTEX
+
+#cmakedefine HAVE_PTHREAD_SIGMASK
 
 #cmakedefine UNIX_HAVE_DLOPEN
 
@@ -17,7 +13,9 @@
 
 #cmakedefine HAVE_BUILTIN_EXPECT
 
-#cmakedefine UNIX
+#cmakedefine ON_UNIX
+
+#cmakedefine ON_WINDOWS
 
 #cmakedefine HAVE_CLOCK_REALTIME_COARSE
 
@@ -29,9 +27,25 @@
 
 #cmakedefine UNIX_HAVE_SETENV
 
+#cmakedefine UNIX_HAVE_MMAP
+
+#cmakedefine HAVE_UNIX_FORK_WAITPID
+
 #cmakedefine ENABLE_PCRE2_8
 
 #cmakedefine ENABLE_CARES
+
+#cmakedefine HAVE_INC_ARPA_INET
+
+#cmakedefine HAVE_INC_NETDB
+
+#cmakedefine HAVE_INC_WINSOCK
+
+#cmakedefine HAVE_SIGACTION
+
+#cmakedefine WIN_HAVE_INC_WINDNS
+
+#cmakedefine WIN_HAVE_DNS_QUERY_A
 
 //#ifdef NDEBUG
 
@@ -137,6 +151,15 @@
 
 #ifndef MAYBE_UNUSED
 #define MAYBE_UNUSED
+#endif
+
+#ifdef ON_WINDOWS
+#define NOMINMAX
+
+#ifdef DELETE
+#undef DELETE
+#endif
+
 #endif
 
 #endif
