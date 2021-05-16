@@ -1,0 +1,60 @@
+version: 0.0.0-{build}
+
+configuration:
+  - Release
+  - Debug
+
+#branches:
+#  only:
+#    - master
+#    - develop
+#    - /feature\/.*/
+
+environment:
+  RUN_ID: "0.0.0-ci-Appveyor-${APPVEYOR_REPO_COMMIT}-${PLATFORM}+$(APPVEYOR_BUILD_NUMBER)"
+  matrix:
+    - GENERATOR: Visual Studio 14 2015
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      ARCH: x64
+
+    - GENERATOR: Visual Studio 15 2017
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      ARCH: Win32
+
+    - GENERATOR: Visual Studio 16 2019
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      ARCH: x64
+
+init:
+  - cmake --version
+install:
+  - cd C:\Tools\vcpkg
+  - git pull
+  - .\bootstrap-vcpkg.bat
+  - vcpkg install libmicrohttpd:x86-windows
+  - vcpkg install libmicrohttpd:x64-windows
+  - vcpkg install pcre2:x86-windows
+  - vcpkg install pcre2:x64-windows
+  - vcpkg install fmt:x64-windows
+  - vcpkg install fmt:x86-windows
+  - vcpkg install gtest:x64-windows
+  - vcpkg install gtest:x86-windows
+  - vcpkg install curl:x64-windows
+  - vcpkg install curl:x86-windows
+  - vcpkg integrate install
+  - cd %APPVEYOR_BUILD_FOLDER%
+before_build:
+  - md build
+  - cd build
+  - md Release
+  - md Debug
+  - cmake -G "%GENERATOR%" -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DRUN_ID=${RUN_ID} ..
+build_script:
+  - cmake --build .
+build:
+  project: build\ALL_BUILD.vcxproj
+  verbosity: normal
+after_build:
+  - cmake --build . --target run-unittest
+cache:
+  - c:\tools\vcpkg\installed

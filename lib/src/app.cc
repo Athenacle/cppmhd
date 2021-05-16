@@ -1,6 +1,7 @@
 #include "config.h"
 
 #include <cppmhd/app.h>
+
 #include <microhttpd.h>
 #include <signal.h>
 
@@ -15,7 +16,7 @@ using namespace cppmhd;
 
 namespace
 {
-void* (*mallocFn)(unsigned long) = std::malloc;
+void* (*mallocFn)(size_t) = std::malloc;
 void (*freeFn)(void*) = std::free;
 
 static const auto defaultEH =
@@ -55,7 +56,7 @@ void cpp_mhd_free(void* ptr)
 }
 
 
-void cpp_mhd_set_malloc(void*(mallocF)(unsigned long), void (*freeF)(void*))
+void cpp_mhd_set_malloc(void*(mallocF)(size_t), void (*freeF)(void*))
 {
     mallocFn = mallocF;
     freeFn = freeF;
@@ -76,12 +77,20 @@ struct AppManager {
 
     AppManager() = default;
 
-    bool haveSIGINT()
+    void listSignals(std::vector<int>& out)
     {
-        std::lock_guard<std::mutex> _(AppManager::manager.handlersMutex);
+        std::lock_guard<std::mutex> _(handlersMutex);
+        for (auto& h : handlers) {
+            out.emplace_back(std::get<0>(h));
+        }
+    }
+
+    bool have(int sig)
+    {
+        std::lock_guard<std::mutex> _(handlersMutex);
         auto begin = AppManager::manager.handlers.begin();
         auto end = AppManager::manager.handlers.end();
-        auto f = std::find_if(begin, end, [](const AppManager::HandlerItem& p) { return std::get<0>(p) == SIGINT; });
+        auto f = std::find_if(begin, end, [sig](const AppManager::HandlerItem& p) { return std::get<0>(p) == sig; });
         return f != end;
     }
 };
@@ -91,12 +100,14 @@ AppManager AppManager::manager;
 void signalHandlerWrapper(int signal)
 {
     std::lock_guard<std::mutex> _(AppManager::manager.handlersMutex);
+    std::lock_guard<std::mutex> __(global::mutex);
+
     auto begin = AppManager::manager.handlers.begin();
     auto end = AppManager::manager.handlers.end();
     auto f = std::find_if(begin, end, [signal](const AppManager::HandlerItem& p) { return std::get<0>(p) == signal; });
 
     assert(f != end);
-    INFO("signal {} received.", strsignal(signal));
+    // LOG_INFO("signal {} received.", strsignal(signal));
     if (f != end) {
         for (auto& app : AppManager::manager.apps) {
             std::get<1> (*f)(*app, signal);
@@ -164,19 +175,26 @@ int App::start(const std::function<void(void)>& cb)
         if (r.build()) {
             http_ = new HttpImplement(addr, std::move(r), host_, eh);
 
-            if (!AppManager::manager.haveSIGINT()) {
+            if (!AppManager::manager.have(SIGINT)) {
                 setSignalHandler(SIGINT, [](App& app, int) {
-                    INFO("SIGINT received. {}", "Stopping...");
+                    // LOG_INFO("SIGINT received. {}", "Stopping...");
                     app.stop();
                 });
             }
+#ifdef SIGPIPE
+            if (!AppManager::manager.have(SIGPIPE)) {
+                setSignalHandler(SIGPIPE, [](App&, int) {});
+            }
+#endif
 
-            return http_->startMHDDaemon(threadCount_, cb);
+            std::vector<int> sigs;
+            AppManager::manager.listSignals(sigs);
+            return http_->startMHDDaemon(threadCount_, cb, sigs);
         } else {
             return CPPMHD_ROUTER_TREE_BUILD_FAILED;
         }
     } else {
-        ERROR("Parse listen address {}:{} failed...", address_, port_);
+        LOG_ERROR("Parse listen address {}:{} failed...", address_, port_);
         return CPPMHD_LISTEN_ADDRESS_ERROR;
     }
 }

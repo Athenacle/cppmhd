@@ -10,6 +10,10 @@
 #define FORMAT_INETADDRESS
 #define FORMAT_REQUEST_STATE
 
+#ifndef NDEBUG
+#define FORMAT_HTTP_METHOD
+#endif
+
 #include "entity.h"
 #include "format.h"
 #include "logger.h"
@@ -64,21 +68,63 @@ struct ConnectionObject {
     MHDHttpRequest *raw;
     HttpController *ctrl;
 
+#ifndef NDEBUG
+    size_t time;
+#endif
     template <class... Args>
     ConnectionObject(Args &&...args)
     {
         raw = new MHDHttpRequest(std::forward<Args>(args)...);
         request = HttpRequestPtr(raw);
         ctrl = nullptr;
+#ifndef NDEBUG
+        time = 1;
+#endif
     }
 };
+}  // namespace
 
+#ifndef NDEBUG
+namespace fmt
+{
+template <>
+struct formatter<ConnectionObject> {
+    char pres;
+
+    FMT_CONSTEXPR auto parse(format_parse_context &ctx) -> decltype(ctx.begin())
+    {
+        auto it = ctx.begin();
+        return it;
+    }
+
+    template <typename FormatContext>
+    auto format(const ConnectionObject &p, FormatContext &ctx) -> decltype(ctx.out())
+    {
+        void *pp = p.raw->processor().get();
+        void *resp = p.response.get();
+        int status = resp != nullptr ? p.response->status() : 0;
+        return format_to(ctx.out(),
+                         "<#{}, {}->{}, PP: {}, Request Status: '{}', Response Status: '{}:{}'>",
+                         p.time,
+                         p.raw->getMethod(),
+                         p.raw->getPath(),
+                         pp,
+                         p.raw->state(),
+                         status,
+                         dispatchErrorCode(static_cast<HttpStatusCode>(status)));
+    }
+};
+}  // namespace fmt
+#endif
+
+namespace
+{
 void setResponseHeader(MHD_Response *resp, const HttpResponse::HeaderType &headers)
 {
     assert(resp);
     for (auto &h : headers) {
         if (MHD_OK != MHD_add_response_header(resp, h.first.c_str(), h.second.c_str())) {
-            WARN("setResponseHeader {}->{} failed", h.first, h.second);
+            LOG_WARN("setResponseHeader {}->{} failed", h.first, h.second);
         }
     }
 }
@@ -143,11 +189,13 @@ MHD_Return MHDconnectionCB(void *cls,
 
     auto co = reinterpret_cast<ConnectionObject *>(*con_cls);
 
+
 #ifndef NDEBUG
     if (co) {
-        TRACE("{}->{}. data {}, size {}, state {}", method, url, (void *)data, *dataSize, co->raw->state());
+        co->time++;
+        LOG_DTRACE("{}: data {}, size {}", *co, (void *)data, *dataSize);
     } else {
-        TRACE("{}->{}. data {}, size {}, co {}", method, url, (void *)data, *dataSize, nullptr);
+        LOG_DTRACE("{}->{}. data {}, size {}, co {}", method, url, (void *)data, *dataSize, nullptr);
     }
 #endif
 
@@ -161,7 +209,7 @@ MHD_Return MHDconnectionCB(void *cls,
                                                 k405MethodNotAllowed,
                                                 HttpError::BAD_HTTP_METHOD,
                                                 FORMAT("un-acceptable Http Method: {}", method));
-
+            LOG_DTRACE("unknown HttpMethod '{}', return 405", method);
             return sendHttpResponsePtr(conn, http, resp);
         }
 
@@ -170,19 +218,29 @@ MHD_Return MHDconnectionCB(void *cls,
         co->response = http->checkRequest(co->request, version);
 
         if (co->response) {
+            LOG_DTRACE("{}: checkRequest return a Response. ", *co);
             return sendHttpResponsePtr(conn, http, co->response);
         }
 
         co->ctrl = http->forward(co->raw, co->raw->param(), tsr);
 
         if (likely(co->ctrl)) {
+            LOG_DTRACE("{}: route found.", *co);
             co->ctrl->onConnection(co->request, co->response);
+            if (co->response) {
+                LOG_DTRACE("{}: onConnection handler return a Response", *co);
+                return sendHttpResponsePtr(conn, http, co->response);
+            }
 
+            LOG_DTRACE("{}: onConnection finished", *co);
             co->raw->state() = RequestState::INITIAL_COMPLETE;
             return MHD_OK;
         } else if (tsr) {
+            LOG_DTRACE("{}: TSR found.", *co);
             return sendTSR(conn, http, co);
         } else {
+            LOG_DTRACE("{}: no route found, 404 ", *co);
+
             co->response = http->getErrorHandler()(
                 co->request, k404NotFound, HttpError::ROUTER_NOT_FOUND, format("{} to {} not found", method, url));
 
@@ -192,7 +250,8 @@ MHD_Return MHDconnectionCB(void *cls,
 
     auto &state = co->raw->state();
 
-    if (unlikely(state == RequestState::ERROR)) {
+    if (unlikely(state == RequestState::RS_ERROR)) {
+        LOG_DTRACE("{}: error recovery: data {}, size {}", *co, (void *)data, *dataSize);
         if (*dataSize != 0) {
             *dataSize = 0;
             return MHD_OK;
@@ -205,46 +264,56 @@ MHD_Return MHDconnectionCB(void *cls,
            || state == RequestState::DATA_RECEIVING);
 
     if (likely(data == nullptr && *dataSize == 0)) {
+        LOG_DTRACE("{}: no data remain ", *co);
+
         if (unlikely(state == RequestState::DATA_RECEIVING)) {
             auto pp = co->raw->processor();
             assert(pp);
             pp->onData(co->request, nullptr, 0);
             state = RequestState::DATA_RECEIVED;
+            LOG_DTRACE("{}: send last data signal to handler.", *co);
             return MHD_OK;
         }
-
 
         if (co->ctrl != nullptr) {
             co->ctrl->onRequest(co->request, co->response);
         }
 
         if (co->response) {
+            LOG_DTRACE("{}: request finish", *co);
             return sendHttpResponsePtr(conn, http, co->response);
+        } else {
+            LOG_DTRACE("{} Handler Should make response but there exist none.", *co);
         }
     } else if (unlikely(co->raw->getMethod() == HttpMethod::GET)) {
         // data in GET Request
+        LOG_DTRACE("{}: data in GET, 400", *co);
+
         co->response = http->getErrorHandler()(
             co->request, k400BadRequest, HttpError::DATA_IN_GET_REQUEST, format("Data in GET Request to {}", url));
-        state = RequestState::ERROR;
+        state = RequestState::RS_ERROR;
         *dataSize = 0;
     } else {
         auto pp = co->raw->processor();
 
         if (unlikely(pp == nullptr)) {
+            LOG_DTRACE("{}: PP not found return 405.", *co);
             co->response = http->getErrorHandler()(co->request,
                                                    k405MethodNotAllowed,
                                                    HttpError::DATA_PROCESSOR_NOT_SET,
                                                    format("Data Processor not set in {} Request to {}", method, url));
 
-            state = RequestState::ERROR;
+            state = RequestState::RS_ERROR;
             *dataSize = 0;
 
         } else {
             if (unlikely(state == RequestState::INITIAL_COMPLETE)) {
+                LOG_DTRACE("{}: PP found", *co);
                 state = RequestState::DATA_RECEIVING;
             }
 
             size_t size = pp->onData(co->request, data, *dataSize);
+            LOG_DTRACE("{}: PP process {}, in {} bytes, return {} bytes", *co, (void *)data, *dataSize, size);
 
             if (unlikely(size == DataProcessor::DataProcessorParseFailed)) {
                 co->response =
@@ -253,10 +322,10 @@ MHD_Return MHDconnectionCB(void *cls,
                                             HttpError::DATA_PROCESSOR_RETURN_ERROR,
                                             format("Data Processor return an error in {} Request to {}", method, url));
 
-                state = RequestState::ERROR;
+                state = RequestState::RS_ERROR;
                 size = *dataSize;
             } else if (unlikely(size > *dataSize)) {
-                WARN(
+                LOG_WARN(
                     "Data Processor return read size {} larger than original data size {}. "
                     "This must be a programming error.",
                     size,
@@ -284,7 +353,7 @@ void connectionFinishCB(void *cls,
     if (http->isLogConnectionStatus()) {
         static const char why[][20] = {
             "Successful Complete", "With Error", "Timeout", "Daemon Shutdown", "Read Error", "Client Abort"};
-        TRACE("Connection Finished: {}", why[toe]);
+        LOG_TRACE("Connection Finished: {}", why[toe]);
     }
 }
 
@@ -305,10 +374,10 @@ void notifyConnectionCB(void *cls,
 
             if (unlikely(http->isV6())) {
                 sockaddr_in6 &addr = *(reinterpret_cast<sockaddr_in6 *>(coninfo->client_addr));
-                TRACE("{} connection to {} (#{})", code[toe], addr, fd);
+                LOG_TRACE("{} connection to {} (#{})", code[toe], addr, fd);
             } else {
                 sockaddr_in &addr = *(reinterpret_cast<sockaddr_in *>(coninfo->client_addr));
-                TRACE("{} connection to {} (#{})", code[toe], addr, fd);
+                LOG_TRACE("{} connection to {} (#{})", code[toe], addr, fd);
             }
         }
     }
@@ -327,15 +396,12 @@ void MHD_LOGGER(void *, const char *fmt, va_list ap)
     if (likely(len > 0 && buffer[len - 1] == '\n')) {
         buffer[len - 1] = 0;
     }
-    INFO("{}", buffer);
+    LOG_INFO("{}", buffer);
 }
-
-static void ignoreSIGPIPE(int) {}
 
 
 void startWait(Barrier *b)
 {
-    registerSignalHandler(SIGPIPE, ignoreSIGPIPE);
     b->wait();
 }
 
@@ -365,11 +431,13 @@ uint32_t calcFlag()
 void HttpImplement::stop()
 {
     if (isRunning()) {
-        b.wait();
+        runningBarrier_.wait();
     }
 }
 
-CPPMHD_Error HttpImplement::startMHDDaemon(uint32_t tc, const std::function<void(void)> &cb)
+CPPMHD_Error HttpImplement::startMHDDaemon(uint32_t tc,
+                                           const std::function<void(void)> &cb,
+                                           const std::vector<int> &sigs)
 {
     auto flag = calcFlag();
     if (addr.isV6()) {
@@ -378,51 +446,72 @@ CPPMHD_Error HttpImplement::startMHDDaemon(uint32_t tc, const std::function<void
 
     if (tc > getNProc() << 3) {
         auto next = getNProc() << 2;
-        WARN("Too large threadCount {}. Set to {}.", tc, next);
+        LOG_WARN("Too large threadCount {}. Set to {}.", tc, next);
         tc = next;
     }
 
     auto sock = addr.getSocket();
 
-    MHD_OptionItem ops[] = {{MHD_OPTION_EXTERNAL_LOGGER, (intptr_t)MHD_LOGGER, this},
-                            {MHD_OPTION_NOTIFY_COMPLETED, (intptr_t)connectionFinishCB, this},
-                            {MHD_OPTION_NOTIFY_CONNECTION, (intptr_t)notifyConnectionCB, this},
-                            {MHD_OPTION_STRICT_FOR_CLIENT, 0, nullptr},
-                            {MHD_OPTION_SERVER_INSANITY, MHD_DSC_SANE, nullptr},
-                            {MHD_OPTION_SOCK_ADDR, 0, (void *)sock},
-                            {MHD_OPTION_URI_LOG_CALLBACK, (intptr_t)MHD_URI_LOGGER, this},
-                            {MHD_OPTION_LISTENING_ADDRESS_REUSE, tc == 1 ? 0 : 1, nullptr},
-                            {MHD_OPTION_END, 0, nullptr}};
+    MHD_OptionItem ops[] = {
+        {MHD_OPTION_EXTERNAL_LOGGER, (intptr_t)MHD_LOGGER, this},
+        {MHD_OPTION_NOTIFY_COMPLETED, (intptr_t)connectionFinishCB, this},
+        {MHD_OPTION_NOTIFY_CONNECTION, (intptr_t)notifyConnectionCB, this},
+        {MHD_OPTION_STRICT_FOR_CLIENT, 0, nullptr},
+#if MHD_VERSION >= 0x96800L
+        {MHD_OPTION_SERVER_INSANITY, MHD_DSC_SANE, nullptr},
+#endif
+        {MHD_OPTION_SOCK_ADDR, 0, (void *)sock},
+        {MHD_OPTION_URI_LOG_CALLBACK, (intptr_t)MHD_URI_LOGGER, this},
+        {MHD_OPTION_LISTENING_ADDRESS_REUSE, tc == 1 ? 0 : 1, nullptr},
+        {MHD_OPTION_END, 0, nullptr}
+    };
 
-    for (auto i = 0u; i < tc; i++) {
-        auto d = MHD_start_daemon(
-            flag, addr.port(), MHDAcceptCB, this, MHDconnectionCB, this, MHD_OPTION_ARRAY, ops, MHD_OPTION_END);
-        if (d != nullptr) {
-            INFO("#{}: begin listening at {}", i, addr);
-            daemons.emplace_back(d);
-        } else {
-            ERROR("#{}: listen failed: {}, stop running threads", i, strerror(errno));
+    {
+        std::lock_guard<std::mutex> _(global::mutex);
+        for (auto i = 0u; i < tc; i++) {
+            auto d = MHD_start_daemon(
+                flag, addr.port(), MHDAcceptCB, this, MHDconnectionCB, this, MHD_OPTION_ARRAY, ops, MHD_OPTION_END);
+            if (d != nullptr) {
+                LOG_INFO("#{}: begin listening at {}", i, addr);
+                daemons.emplace_back(d);
+            } else {
+                LOG_ERROR("#{}: listen failed: {}, stop running threads", i, strerror(errno));
 
-            for (auto &daemon : daemons) {
-                MHD_stop_daemon(daemon);
+                for (auto &daemon : daemons) {
+                    MHD_stop_daemon(daemon);
+                }
+
+                return CPPMHD_Error::CPPMHD_LISTEN_FAILED;
             }
-
-            return CPPMHD_Error::CPPMHD_LISTEN_FAILED;
         }
     }
+#ifdef HAVE_PTHREAD_SIGMASK
+    {
+        sigset_t sigset;
+        sigemptyset(&sigset);
+        for (auto i : sigs) {
+            sigaddset(&sigset, i);
+        }
+        auto mask = pthread_sigmask(SIG_SETMASK, &sigset, nullptr);
+        if (mask) {
+            LOG_ERROR("pthread_sigmask failed: {}", mask);
+        }
+    }
+#endif
 
     running = true;
-    thr = std::thread(startWait, &b);
+    thr = std::thread(startWait, &runningBarrier_);
     cb();
     thr.join();
     running = false;
+    {
+        std::lock_guard<std::mutex> _(global::mutex);
+        LOG_INFO("{}", "stopping MHD daemon...");
 
-    INFO("{}", "stopping MHD daemon...");
-
-    for (auto &d : daemons) {
-        MHD_stop_daemon(d);
+        for (auto &d : daemons) {
+            MHD_stop_daemon(d);
+        }
     }
-
     return CPPMHD_Error::CPPMHD_OK;
 }
 

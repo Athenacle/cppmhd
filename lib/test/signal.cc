@@ -1,7 +1,8 @@
 #include "config.h"
 
-#ifdef UNIX
+#ifdef ON_UNIX
 #include <cppmhd/app.h>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 

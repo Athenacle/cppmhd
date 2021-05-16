@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 3.10)
 
 set(PROJECT_NAME cppmhd)
 
@@ -18,6 +18,10 @@ include(Dependency)
 
 option(BUILD_SHARED "Shared" ON)
 option(BUILD_STATIC "Static" ON)
+
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Debug")
+endif ()
 
 add_subdirectory(lib)
 add_subdirectory(examples)

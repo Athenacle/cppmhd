@@ -63,6 +63,7 @@ HttpResponsePtr defaultErrorHandler(HttpStatusCode sc, HttpError, const std::str
 
 bool registerSignalHandler(int signal, signalHandler sh)
 {
+#ifdef HAVE_SIGACTION
     struct sigaction oldsig;
     struct sigaction sig;
 
@@ -78,12 +79,16 @@ bool registerSignalHandler(int signal, signalHandler sh)
 #endif
 
     if (0 != sigaction(signal, &sig, &oldsig)) {
-        ERROR("failed to install '{}' handler: {}", name, strerror(errno));
+        LOG_ERROR("failed to install '{}' handler: {}", name, strerror(errno));
         return false;
     } else {
-        DEBUG("install '{}' signal success.", name);
+        LOG_DEBUG("install '{}' signal success.", name);
         return true;
     }
+#else
+    ::signal(signal, sh);
+    return errno == 0;
+#endif
 }
 
 const char* dispatchErrorCode(HttpStatusCode sc)
@@ -249,7 +254,7 @@ bool Regex::compileRegex(Regex& re, const char* pattern)
     if (unlikely(ptr == nullptr)) {
         PCRE2_UCHAR buffer[256];
         pcre2_get_error_message(error, buffer, sizeof(buffer));
-        ERROR("compile regex pattern '{}' failed at offset {}: '{}'", pattern, offset, buffer);
+        LOG_ERROR("compile regex pattern '{}' failed at offset {}: '{}'", pattern, offset, buffer);
     } else {
         auto pl = std::char_traits<char>::length(pattern);
         auto pt = new char[pl + 1];
@@ -258,7 +263,7 @@ bool Regex::compileRegex(Regex& re, const char* pattern)
         re.pattern_ = pt;
 
 #ifndef NDEBUG
-        TRACE("compile regex pattern '{}': {}", pattern, ptr != nullptr ? "success" : "failed");
+        LOG_TRACE("compile regex pattern '{}': {}", pattern, ptr != nullptr ? "success" : "failed");
 #endif
     }
 

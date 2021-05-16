@@ -2,6 +2,8 @@
 
 #include "config.h"
 
+#include <algorithm>
+
 #include "core.h"
 #include "logger.h"
 #include "utils.h"
@@ -15,13 +17,19 @@ using namespace cppmhd;
 #include <gtest/gtest.h>
 #endif
 
-#define CURL_PROCESS(expr)                                                          \
-    do {                                                                            \
-        auto ret = (expr);                                                          \
-        if (ret != CURLE_OK) {                                                      \
-            ERROR("Curl error {} ({}) -> {}", curl_easy_strerror(ret), #expr, url); \
-        }                                                                           \
-        EXPECT_EQ(ret, CURLE_OK);                                                   \
+#ifdef min
+#define MIN min
+#else
+#define MIN std::min
+#endif
+
+#define CURL_PROCESS(expr)                                                              \
+    do {                                                                                \
+        auto ret = (expr);                                                              \
+        if (ret != CURLE_OK) {                                                          \
+            LOG_ERROR("Curl error {} ({}) -> {}", curl_easy_strerror(ret), #expr, url); \
+        }                                                                               \
+        EXPECT_EQ(ret, CURLE_OK);                                                       \
     } while (false)
 
 namespace
@@ -64,6 +72,12 @@ size_t uploadData(char *ptr, size_t size, size_t nmemb, void *userp)
     return total;
 }
 }  // namespace
+
+
+void Curl::setTimeout(long to)
+{
+    CURL_PROCESS(curl_easy_setopt(curl, CURLOPT_TIMEOUT, 2000l));
+}
 
 void Curl::perform()
 {
@@ -130,7 +144,7 @@ void Curl::setup()
     CURL_PROCESS(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteDataCB));
     CURL_PROCESS(curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, curlHeaderCB));
     CURL_PROCESS(curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, ""));
-    CURL_PROCESS(curl_easy_setopt(curl, CURLOPT_TIMEOUT, 2000l));
+    setTimeout(3);
 }
 
 const void *Curl::upload(size_t &size)
@@ -142,7 +156,7 @@ const void *Curl::upload(size_t &size)
         size = 0;
         return nullptr;
     } else {
-        auto nextSize = std::min(size, totalSize - uploadPos_);
+        auto nextSize = MIN(size, totalSize - uploadPos_);
         auto ret = ptr + uploadPos_;
         size = nextSize;
         uploadPos_ += nextSize;
@@ -224,9 +238,10 @@ Curl::~Curl()
     }
 }
 
-Curl::Curl(const std::string &scheme, const std::string &host, uint16_t port, const std::string &uri) : Curl()
+Curl::Curl(CurlSchema schema, const std::string &host, uint16_t port, const std::string &uri) : Curl()
 {
-    url = FORMAT("{}://{}:{}{}", scheme, host, port, uri);
+    auto sh = schema == CurlSchema::HTTP ? "http" : "https";
+    url = FORMAT("{}://{}:{}{}", sh, host, port, uri);
     setup();
 }
 

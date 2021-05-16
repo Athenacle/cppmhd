@@ -11,10 +11,10 @@ CPPMHD_NAMESPACE_BEGIN
 class DataProcessor
 {
   public:
-    DataProcessor() = default;
+    DataProcessor();
     virtual ~DataProcessor();
 
-    static const size_t DataProcessorParseFailed = -1u;
+    static const size_t DataProcessorParseFailed = static_cast<size_t>(~0);
 
     virtual size_t onData(HttpRequestPtr& req, const void* in, size_t size) = 0;
 };

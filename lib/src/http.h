@@ -32,7 +32,7 @@ class HttpImplement
     std::vector<MHD_Daemon *> daemons;
 
     InetAddress addr;
-    Barrier b;
+    Barrier runningBarrier_;
     Router router;
     std::thread thr;
     std::atomic_bool running;
@@ -44,7 +44,7 @@ class HttpImplement
 
   public:
     HttpImplement(const InetAddress &ad, Router &&r, std::string &host, const App::errorHandler &eh)
-        : addr(ad), b(2), router(std::move(r)), eh(eh), host(host)
+        : addr(ad), runningBarrier_(2), router(std::move(r)), eh(eh), host(host)
     {
         running = false;
 
@@ -66,7 +66,9 @@ class HttpImplement
         return eh;
     }
 
-    CPPMHD_Error startMHDDaemon(uint32_t threadCount, const std::function<void(void)> &cb);
+    CPPMHD_Error startMHDDaemon(uint32_t threadCount,
+                                const std::function<void(void)> &cb,
+                                const std::vector<int> &sigs);
 
     HttpController *forward(HttpRequest *req, std::map<std::string, std::string> &param, bool &tsr) const
     {

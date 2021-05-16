@@ -32,6 +32,9 @@ struct ShaCalc {
     uint64_t start;
 #endif
     bool finished;
+    mutable std::mutex mutex;
+
+    ShaCalc& operator=(const ShaCalc&);
 
     ShaCalc();
 
@@ -39,8 +42,11 @@ struct ShaCalc {
 
     void final();
 
+    void reset();
+
     operator bool() const
     {
+        std::lock_guard<std::mutex> _(mutex);
         return finished;
     }
 
@@ -114,6 +120,8 @@ class SimpleRequestMock : public ActionInterface<void(HttpRequestPtr, HttpRespon
 class HttpApp : public Test
 {
     static uint8_t lv;
+
+    std::mutex mutex_;
 
     void run();
 

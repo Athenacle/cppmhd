@@ -1,0 +1,157 @@
+name: CPPMHD_CI
+
+on:
+  push:
+    branches: [master, develop, "feature/*"]
+  pull_request:
+    branches: [master]
+
+env:
+  BUILD_TYPE: Debug
+  RUN_ID: "0.0.0-ci-GitHubActions-$GITHUB_SHA"
+
+jobs:
+  unix:
+    name: ${{matrix.buildname}}
+    runs-on: ${{matrix.os}}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            ostype: macos
+            buildname: "macos/clang"
+            link: STATIC
+            triplet: x64-osx
+            compiler: clang_64
+          - os: ubuntu-20.04
+            buildname: "ubuntu-20.04/clang"
+            link: STATIC
+            ostype: ubuntu
+            triplet: x64-linux
+            compiler: clang_64
+          - os: ubuntu-20.04
+            buildname: "ubuntu-20.04/gcc"
+            link: SHARED
+            ostype: ubuntu
+            triplet: x64-linux
+            compiler: gcc_64
+          - os: ubuntu-20.04
+            buildname: "ubuntu-20.04/gcc"
+            link: STATIC
+            ostype: ubuntu
+            triplet: x64-linux
+            compiler: gcc_64
+          - os: ubuntu-20.04
+            buildname: "ubuntu-20.04/gcc-10"
+            link: STATIC
+            ostype: ubuntu
+            triplet: x64-linux
+            compiler: gcc_64
+
+    steps:
+      - name: "[All]-Checkout source code"
+        uses: actions/checkout@v2
+        with:
+          submodules: false
+          fetch-depth: 0
+
+      - name: "[MacOS]-Install dependencies"
+        if: runner.os == 'macOS'
+        run: |
+          brew install fmt pcre2 c-ares curl gnutls
+          brew install openssl@1.1
+          brew install pkg-config
+          brew install lcov
+          brew install libmicrohttpd
+          brew install googletest
+
+      - name: "[Linux]-Install dependencies"
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt update
+          sudo apt install libmicrohttpd-dev libpcre2-dev libc-ares-dev libfmt-dev libcurl4-openssl-dev libssl-dev pkg-config lcov libgtest-dev libgmock-dev
+
+      - name: "[Linux]-Install gcc-10 if required"
+        if: matrix.buildname == 'ubuntu-20.04/gcc-10'
+        run: |
+          sudo apt install gcc-10 g++-10
+
+      - name: "[All]-Create build directory"
+        run: |
+          mkdir build
+
+      - name: "[Linux]-CMake configure"
+        working-directory: ./build
+        shell: bash
+        if: matrix.compiler == 'gcc_64'
+        run: |
+          [[ ${{ matrix.link  }} == "SHARED" ]] && SHARED="ON" || SHARED="OFF"
+          [[ ${{ matrix.link  }} == "STATIC" ]] && STATIC="ON" || STATIC="OFF"
+          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=OFF -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=$SHARED -DBUILD_STATIC=$STATIC -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID}}
+        env:
+          THIS_ID: ${{ env.RUN_ID }}-Linux-$GITHUB_RUN_NUMBER
+
+      - name: "[MacOS]-CMake configure"
+        working-directory: ./build
+        shell: bash
+        if: ${{ matrix.compiler == 'clang_64' && runner.os == 'macOS' }}
+        run: |
+          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=OFF -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID }}
+        env:
+          CC: clang
+          CXX: clang++
+          THIS_ID: ${{ env.RUN_ID }}-Darwin-$GITHUB_RUN_NUMBER
+
+      - name: "[Linux]-CMake configure [Clang]"
+        working-directory: ./build
+        shell: bash
+        if: ${{ matrix.compiler == 'clang_64' && runner.os == 'Linux' }}
+        run: |
+          sudo apt install clang-10
+          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=ON -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=ON -DBUILD_STATIC=ON -DLLVM_COV_PATH=$(which llvm-cov-10) -DLLVM_PROFDATA_PATH=$(which llvm-profdata-10) -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID }}
+        env:
+          CC: clang-10
+          CXX: clang++-10
+          THIS_ID: ${{ env.RUN_ID }}-Linux-$GITHUB_RUN_NUMBER
+
+      - name: "[Linux]-CMake configure [GCC-10]"
+        working-directory: ./build
+        if: matrix.buildname == 'ubuntu-20.04/gcc-10'
+        run: |
+          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=OFF -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=ON -DBUILD_STATIC=ON -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID }}
+        env:
+          CC: gcc-10
+          CXX: g++10
+          THIS_ID: ${{ env.RUN_ID }}-Linux-$GITHUB_RUN_NUMBER
+
+      - name: "[All]-Build"
+        working-directory: ./build
+        run: |
+          make
+        env:
+          VERBOSE: 1
+
+      - name: "[All]-Test"
+        working-directory: ./build
+        run: |
+          lib/test/unittest
+        env:
+          ASAN_OPTIONS: detect_container_overflow=0
+
+      - name: "[Linux]-Clang-coverage"
+        working-directory: ./build
+        if: matrix.buildname == 'ubuntu-20.04/clang'
+        run: |
+          make ccov-unittest
+          make ccov-all
+          make ccov-all-export
+
+      - name: "[Linux]-Clang-coverage-upload"
+        if: matrix.buildname == 'ubuntu-20.04/clang'
+        uses: codecov/codecov-action@v1.5.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ${{ github.workspace }}/build/coverage
+          flags: unittest

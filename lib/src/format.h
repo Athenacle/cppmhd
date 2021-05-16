@@ -17,6 +17,10 @@ using namespace cppmhd;
 #include "entity.h"
 #endif
 
+#if defined ON_WINDOWS && defined DELETE
+#undef DELETE
+#endif
+
 namespace fmt
 {
 #if !defined NDEBUG && defined FORMAT_REQUEST_STATE
@@ -44,7 +48,9 @@ struct formatter<RequestState> {
             BUILD_REQUEST_STATE(INITIAL_COMPLETE)
             BUILD_REQUEST_STATE(DATA_RECEIVING)
             BUILD_REQUEST_STATE(DATA_RECEIVED)
-            BUILD_REQUEST_STATE(ERROR)
+            case RequestState::RS_ERROR:
+                ptr = "ERROR";
+                break;
         }
         return format_to(ctx.out(), "{}", ptr);
 #undef BUILD_REQUEST_STATE
@@ -130,7 +136,13 @@ struct formatter<sockaddr_in> {
             const size_t size = INET6_ADDRSTRLEN + 1;
             char buffer[size];
 
+#if defined ON_WINDOWS && _MSC_VER <= 1910
+            const void* ptr = &p.sin_addr;
+            void* actual = const_cast<void*>(ptr);
+            MAYBE_UNUSED auto ret = inet_ntop(AF_INET, actual, buffer, INET_ADDRSTRLEN);
+#else
             MAYBE_UNUSED auto ret = inet_ntop(AF_INET, &p.sin_addr, buffer, INET_ADDRSTRLEN);
+#endif
             assert(ret == buffer);
             if (pres == 'h') {
                 return format_to(ctx.out(), "{}", buffer);
@@ -167,7 +179,14 @@ struct formatter<sockaddr_in6> {
             const size_t size = INET6_ADDRSTRLEN + 1;
             char buffer[size];
 
+#if defined ON_WINDOWS && _MSC_VER <= 1910
+            const void* ptr = &p.sin6_addr;
+            void* actual = const_cast<void*>(ptr);
+            MAYBE_UNUSED auto ret = inet_ntop(AF_INET6, actual, buffer, INET6_ADDRSTRLEN);
+#else
             MAYBE_UNUSED auto ret = inet_ntop(AF_INET6, &p.sin6_addr, buffer, INET6_ADDRSTRLEN);
+#endif
+
             assert(ret == buffer);
             if (pres == 'h') {
                 return format_to(ctx.out(), "{}", buffer);

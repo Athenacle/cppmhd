@@ -1,6 +1,8 @@
 #include "config.h"
 
-#ifdef UNIX
+#ifdef ON_UNIX
+
+#include <signal.h>
 
 #include "http_app.h"
 #include "test.h"

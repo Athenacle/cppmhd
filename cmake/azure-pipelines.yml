@@ -1,0 +1,105 @@
+pool:
+  name: AzurePipelines-CI
+
+trigger:
+  - azure-pipelines
+  - master
+  - develop
+  - feature/**
+
+variables:
+  RUN_ID: "0.0.0-ci-AzurePipelines-$(Build.SourceVersion)-$(Agent.OS)+$(Build.BuildNumber)"
+
+jobs:
+  - job: macOS
+    pool:
+      vmImage: "macOS-latest"
+    steps:
+      - task: Cache@2
+        inputs:
+          key: "cppmhd-homebrew"
+          path: "$(VCPKG_INSTALLATION_ROOT)"
+
+      - script: |
+          brew install fmt pcre2 c-ares curl gnutls
+          brew install openssl@1.1
+          brew install pkg-config
+          brew install lcov
+          brew install libmicrohttpd
+          brew install googletest
+        displayName: "Install Dependencies"
+
+      - task: CMake@1
+        inputs:
+          cmakeArgs: "-S .. -B . -DCMAKE_BUILD_TYPE:STRING=Debug  -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=OFF -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -DRUN_ID=$(RUN_ID)"
+        displayName: "CMake Configure"
+
+      - task: CMake@1
+        inputs:
+          cmakeArgs: "--build . --target all -j 2 --verbose"
+        displayName: "CMake Build"
+
+      - task: CMake@1
+        inputs:
+          cmakeArgs: "--build . --target run-unittest"
+        displayName: "CMake Run Test"
+
+  - job: Windows
+    pool:
+      vmImage: "vs2017-win2016"
+    steps:
+      - task: Cache@2
+        inputs:
+          key: "cppmhd-vcpkg"
+          path: "$(VCPKG_INSTALLATION_ROOT)"
+
+      - script: |
+          vcpkg install libmicrohttpd:x64-windows
+          vcpkg install pcre2:x64-windows
+          vcpkg install fmt:x64-windows
+          vcpkg install gtest:x64-windows
+          vcpkg install curl:x64-windows
+        displayName: "Install Dependencies"
+
+      - task: CMake@1
+        inputs:
+          cmakeArgs: "-S .. -B . -DCMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_TOOLCHAIN_FILE=c:/vcpkg/scripts/buildsystems/vcpkg.cmake  -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -DRUN_ID=$(RUN_ID) -A x64"
+        displayName: "CMake Configure"
+
+      - task: MSBuild@1
+        inputs:
+          solution: 'build\ALL_BUILD.vcxproj'
+          msbuildArchitecture: "x64"
+          maximumCpuCount: true
+
+      - task: CMake@1
+        inputs:
+          cmakeArgs: "--build . --target run-unittest"
+        displayName: "CMake Run Test"
+
+  - job: Ubuntu
+    pool:
+      vmImage: ubuntu-latest
+
+    steps:
+      - checkout: self
+      - script: |
+          sudo apt-get update
+          sudo apt-get install -yq build-essential libmicrohttpd-dev libpcre2-dev libc-ares-dev libfmt-dev libcurl4-openssl-dev
+          sudo sudo apt-get install -yq libssl-dev pkg-config libgtest-dev libgmock-dev cmake
+          mkdir ./build
+        displayName: "Install Dependencies"
+
+      - task: CMake@1
+        inputs:
+          cmakeArgs: "-S .. -B . -DCMAKE_BUILD_TYPE:STRING=Debug  -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=OFF -DBUILD_STATIC=ON  -DRUN_ID=$(RUN_ID)"
+        displayName: "CMake Configure"
+      - task: CMake@1
+        inputs:
+          cmakeArgs: "--build . --target all -j 2 --verbose"
+        displayName: "CMake Build"
+
+      - task: CMake@1
+        inputs:
+          cmakeArgs: "--build . --target run-unittest"
+        displayName: "CMake Run Test"

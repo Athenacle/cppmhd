@@ -78,8 +78,12 @@ option(CODE_COVERAGE "Builds targets with code coverage instrumentation. (Requir
        OFF)
 
 # Programs
-find_program(LLVM_COV_PATH llvm-cov)
-find_program(LLVM_PROFDATA_PATH llvm-profdata)
+if (NOT LLVM_COV_PATH)
+    find_program(LLVM_COV_PATH llvm-cov)
+endif ()
+if (NOT LLVM_PROFDATA_PATH)
+    find_program(LLVM_PROFDATA_PATH llvm-profdata)
+endif ()
 find_program(LCOV_PATH lcov)
 find_program(GENHTML_PATH genhtml)
 # Hide behind the 'advanced' mode flag for GUI/ccmake
