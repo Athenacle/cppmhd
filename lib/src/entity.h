@@ -9,7 +9,7 @@
 
 CPPMHD_NAMESPACE_BEGIN
 
-enum class RequestState { INITIAL, INITIAL_COMPLETE, DATA_RECEIVING, DATA_RECEIVED, ERROR };
+enum class RequestState { INITIAL, INITIAL_COMPLETE, DATA_RECEIVING, DATA_RECEIVED, RS_ERROR };
 
 class MHDHttpRequest : public HttpRequest
 {

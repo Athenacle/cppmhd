@@ -7,6 +7,7 @@
 #include "logger.h"
 #include "test.h"
 #include "utils.h"
+#include "format.h"
 
 using namespace cppmhd;
 using std::move;

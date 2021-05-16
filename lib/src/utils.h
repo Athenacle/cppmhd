@@ -6,9 +6,16 @@
 #include <cppmhd/app.h>
 #include <cppmhd/core.h>
 
+#ifdef HAVE_INC_ARPA_INET
 #include <arpa/inet.h>
-#include <pthread.h>
+#endif
 
+#ifdef ON_WINDOWS
+#pragma comment(lib, "Ws2_32.lib")
+#endif
+
+#include <algorithm>
+#include <condition_variable>
 #include <cstring>
 #include <map>
 #include <mutex>
@@ -127,35 +134,34 @@ class Regex
 
 class Barrier
 {
-    pthread_barrier_t *bar;
+    std::mutex mutex_;
+    std::condition_variable cv_;
+    volatile uint32_t number_;
+    uint32_t total_;
+
+    Barrier() = delete;
+    Barrier(const Barrier &) = delete;
+    Barrier(Barrier &&) = delete;
+    Barrier &operator=(const Barrier &) = delete;
+    Barrier &operator=(Barrier &&) = delete;
 
   public:
-    Barrier()
-    {
-        bar = nullptr;
-    }
-
-    Barrier(Barrier &&that)
-    {
-        std::swap(bar, that.bar);
-    }
-
     explicit Barrier(uint32_t n)
     {
-        bar = new pthread_barrier_t;
-        pthread_barrier_init(bar, nullptr, n);
-    }
-    ~Barrier()
-    {
-        if (likely(bar)) {
-            pthread_barrier_destroy(bar);
-            delete bar;
-        }
+        total_ = number_ = n;
     }
 
-    int wait()
+    ~Barrier() {}
+
+    void wait()
     {
-        return pthread_barrier_wait(bar);
+        std::unique_lock<std::mutex> lock(mutex_);
+        if (number_ <= total_) {
+            number_--;
+
+            cv_.wait(lock, [this]() { return this->number_ == 0; });
+            cv_.notify_all();
+        }
     }
 };
 
@@ -219,7 +225,7 @@ class InetAddress
 
     static bool from(InetAddress &out, sockaddr_in *in, uint16_t port)
     {
-        memcpy(&out.address.v4.sin_addr, in, sizeof(out.address.v4.sin_addr));
+        memcpy(&out.address.v4, in, sizeof(out.address.v4));
         out.ipv6 = false;
         out.address.v4.sin_family = AF_INET;
         out.address.v4.sin_port = htons((port));
@@ -229,7 +235,7 @@ class InetAddress
 
     static bool from(InetAddress &out, sockaddr_in6 *in, uint16_t port)
     {
-        memcpy(&out.address.v6.sin6_addr, in, sizeof(out.address.v6.sin6_addr));
+        memcpy(&out.address.v6, in, sizeof(out.address.v6));
         out.ipv6 = true;
         out.address.v6.sin6_family = AF_INET6;
         out.address.v6.sin6_port = htons((port));

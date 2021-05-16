@@ -68,7 +68,11 @@ class HttpResponse
     struct HttpHeaderCompare {
         bool operator()(const std::string& first, const std::string& second) const
         {
+#if _WIN32
+            return _stricmp(first.c_str(), second.c_str()) < 0;
+#else
             return strncasecmp(first.c_str(), second.c_str(), std::min(first.length(), second.length())) < 0;
+#endif
         }
     };
 

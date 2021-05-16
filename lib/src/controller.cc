@@ -19,6 +19,10 @@ HttpController::~HttpController() {}
 
 DataProcessor::~DataProcessor() {}
 
+DataProcessor::DataProcessor()
+{
+    LOG_DTRACE("{} this = {}", "DataProcessor::DataProcessor", (void *)this);
+}
 namespace
 {
 using ccp = const char *;
@@ -94,7 +98,7 @@ MHD_Return formIter(void *cls, MHD_ValueKind kind, ccp key, ccp fN, ccp cT, ccp 
     return fp->onData(key, fN, cT, tE, data, off, size) ? MHD_OK : MHD_FAILED;
 }
 
-};  // namespace
+}  // namespace
 
 void FormDataProcessorController::onConnection(HttpRequestPtr req, HttpResponsePtr &)
 {

@@ -20,20 +20,12 @@ extern std::shared_ptr<AbstractLogger> logInstance;
 
 inline uint8_t getLevel()
 {
-#if __cplusplus >= 201709L
-    return level.load(std::memory_order::acquire);
-#else
-    return level.load(std::memory_order::memory_order_acquire);
-#endif
+    return level;
 }
 
 inline void setLevel(enum LogLevel lv)
 {
-#if __cplusplus >= 201709L
-    level.store(lv, std::memory_order::release);
-#else
-    level.store(lv, std::memory_order::memory_order_release);
-#endif
+    level = lv;
 }
 
 class SimpleSTDOUTLogger : public AbstractLogger
@@ -65,11 +57,24 @@ inline void unSetLogger()
         }                                                                                    \
     } while (false)
 
-#define TRACE(f, ...) LOGIT(cppmhd::log::LogLevel::kTrace, FORMAT(f, ##__VA_ARGS__))
-#define DEBUG(f, ...) LOGIT(cppmhd::log::LogLevel::kDebug, FORMAT(f, ##__VA_ARGS__))
-#define INFO(f, ...) LOGIT(cppmhd::log::LogLevel::kInfo, FORMAT(f, ##__VA_ARGS__))
-#define WARN(f, ...) LOGIT(cppmhd::log::LogLevel::kWarning, FORMAT(f, ##__VA_ARGS__))
-#define ERROR(f, ...) LOGIT(cppmhd::log::LogLevel::kError, FORMAT(f, ##__VA_ARGS__))
+#define LOG_TRACE(f, ...) LOGIT(cppmhd::log::LogLevel::kTrace, FORMAT(f, ##__VA_ARGS__))
+#define LOG_DEBUG(f, ...) LOGIT(cppmhd::log::LogLevel::kDebug, FORMAT(f, ##__VA_ARGS__))
+#define LOG_INFO(f, ...) LOGIT(cppmhd::log::LogLevel::kInfo, FORMAT(f, ##__VA_ARGS__))
+#define LOG_WARN(f, ...) LOGIT(cppmhd::log::LogLevel::kWarning, FORMAT(f, ##__VA_ARGS__))
+#define LOG_ERROR(f, ...) LOGIT(cppmhd::log::LogLevel::kError, FORMAT(f, ##__VA_ARGS__))
+
+#define LV_DTRACE (cppmhd::log::LogLevel::kFatal + 1)
+
+#ifndef NDEBUG
+#define LOG_DTRACE(f, ...)                                                                                          \
+    do {                                                                                                            \
+        cppmhd::log::logInstance->output(                                                                           \
+            static_cast<log::LogLevel>(LV_DTRACE), __FILE__, __func__, __LINE__, FORMAT(f, ##__VA_ARGS__).c_str()); \
+    } while (false)
+#else
+#define LOG_DTRACE(f, ...) (void(0))
+#endif
+
 }  // namespace log
 
 CPPMHD_NAMESPACE_END

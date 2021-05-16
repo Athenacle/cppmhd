@@ -11,6 +11,7 @@
 
 using namespace cppmhd::log;
 
+#ifndef ON_WINDOWS
 #define RED "\033[31m"
 #define FATAL "\033[1m" RED
 #define GREEN "\033[32m"
@@ -19,8 +20,20 @@ using namespace cppmhd::log;
 #define MAGENTA "\033[35m"
 #define DIM " \033[2m"
 #define LG "\033[37m"
-
+#define DG "\033[90m"
 #define RESET "\033[0m"
+#else
+#define RED 
+#define FATAL 
+#define GREEN 
+#define YELLOW
+#define BLUE 
+#define MAGENTA 
+#define DIM 
+#define LG 
+#define DG
+#define RESET
+#endif
 
 CPPMHD_NAMESPACE_BEGIN
 
@@ -34,17 +47,24 @@ void SimpleSTDOUTLogger::output(enum LogLevel lv, const char*, const char* func,
                                     GREEN " [INFO] " RESET,
                                     YELLOW " [WARN] " RESET,
                                     RED " [ERROR] " RESET,
-                                    FATAL " [FATAL] " RESET};
-
+                                    FATAL " [FATAL] " RESET
+#ifndef NDEBUG
+                                    ,
+                                    DG "[DTRACE]" RESET
+#endif
+    };
+#ifdef NDEBUG
     if (lv >= getLevel()) {
         auto level = lv;
-
         if (level > kError) {
-            WARN("invalid LogLevel {}. Assume as kInfo", level);
+            LOG_WARN("invalid LogLevel {}. Assume as kInfo", level);
 
             level = kInfo;
         }
-
+#else
+    if (lv >= getLevel() && lv <= LV_DTRACE) {
+        auto level = lv;
+#endif
         auto all = fmt::format(
             "{:%Y-%m-%d %H:%M:%S} {} [{}:{}] {}\n", fmt::localtime(time(nullptr)), lvStr[level], func, line, message);
 

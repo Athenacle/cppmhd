@@ -13,7 +13,11 @@ using cppmhd::HttpMethod;
 struct HttpHeaderCompare {
     bool operator()(const std::string& first, const std::string& second) const
     {
+#ifdef WIN32
+        return _stricmp(first.c_str(), second.c_str()) < 0;
+#else
         return strncasecmp(first.c_str(), second.c_str(), std::min(first.length(), second.length())) < 0;
+#endif
     }
 };
 using HeaderType = std::map<std::string, std::string, HttpHeaderCompare>;
@@ -62,17 +66,19 @@ class Curl
 
     const int BAD_STATUS = -1;
 
+    enum class CurlSchema { HTTP, HTTPS };
+
     ~Curl();
 
     Curl();
 
-    Curl(const std::string& scheme, const std::string& host, uint16_t port, const std::string& uri);
+    Curl(CurlSchema schema, const std::string& host, uint16_t port, const std::string& uri);
 
-    Curl(const std::string& host, uint16_t port, const std::string& uri) : Curl("http", host, port, uri) {}
+    Curl(const std::string& host, uint16_t port, const std::string& uri) : Curl(CurlSchema::HTTP, host, port, uri) {}
 
-    Curl(const std::string& host, uint16_t port) : Curl("http", host, port, "/") {}
+    Curl(const std::string& host, uint16_t port) : Curl(CurlSchema::HTTP, host, port, "/") {}
 
-    Curl(const std::string& host) : Curl("http", host, 80, "/") {}
+    Curl(const std::string& host) : Curl(CurlSchema::HTTP, host, 80, "/") {}
 
     void addRequestHeader(const std::string& key, const std::string& value);
 
@@ -86,6 +92,8 @@ class Curl
     {
         return headers_;
     }
+    void setTimeout(long to);
+
     const std::string& body() const
     {
         return response;

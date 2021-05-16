@@ -11,7 +11,11 @@
 namespace
 {
 std::vector<size_t> inSeq;
-#define CHECK_IN_SEQ ASSERT_TRUE(inSeq.size() >= 1 && inSeq[inSeq.size() - 1] == 0)
+#define CHECK_IN_SEQ                                                    \
+    do {                                                                \
+        ASSERT_TRUE(inSeq.size() >= 1 && inSeq[inSeq.size() - 1] == 0); \
+        inSeq.clear();                                                  \
+    } while (false)
 }  // namespace
 
 class HttpSha256Processor : public HttpDataProcessor<ShaCalc>
@@ -58,13 +62,17 @@ class HttpSha256Controller : public DataProcessorController<ShaCalc, Sha256Proce
 class HttpStringDataProcessor : public HttpDataProcessor<std::string>
 {
   public:
-    HttpStringDataProcessor() = default;
+    HttpStringDataProcessor()
+    {
+        LOG_DTRACE("{}::{} this = {}", "HttpStringDataProcessor", __func__, (void*)this);
+    }
     virtual ~HttpStringDataProcessor() {}
 
     virtual size_t onData(HttpRequestPtr&, std::string& d, const void* data, size_t size) override
     {
         inSeq.emplace_back(size);
-
+        LOG_DTRACE(
+            "{}::{} this = {} => data ptr {}, size {}", "HttpStringDataProcessor", __func__, (void*)this, data, size);
         d.append(reinterpret_cast<const char*>(data), size);
         return size;
     }
@@ -72,11 +80,12 @@ class HttpStringDataProcessor : public HttpDataProcessor<std::string>
 
 class StringDataCollectorCtrl : public DataProcessorController<std::string, HttpStringDataProcessor>
 {
-    mutable std::string result_;
+    std::string result_;
 
   public:
     virtual void onRequest(HttpRequestPtr, const std::string& data, HttpResponsePtr& resp) override
     {
+        LOG_DTRACE("{}: data: {}, size {}", __func__, data, data.size());
         result_ = data;
         resp = std::make_shared<HttpResponse>();
         resp->status(k200OK);
@@ -84,33 +93,38 @@ class StringDataCollectorCtrl : public DataProcessorController<std::string, Http
     }
 
     virtual ~StringDataCollectorCtrl() {}
-    StringDataCollectorCtrl() = default;
-
-    const std::string& result() const
+    StringDataCollectorCtrl()
     {
-        return result_;
+        LOG_DTRACE("{}::{} this = {}", "StringDataCollectorCtrl", __func__, (void*)this);
+    }
+
+    void result(std::string& r)
+    {
+        r = result_;
     }
 };
 
 TEST_F(HttpApp, stringProcessor)
 {
-    auto mock = add<StringDataCollectorCtrl>(HttpMethod::POST, myName);
+    auto mock = add<StringDataCollectorCtrl>(HttpMethod::PUT, myName);
     start();
 
     Curl c = curl();
-    c.method(HttpMethod::POST);
+    c.method(HttpMethod::PUT);
     c.upload("hello?");
     c.perform();
 
+    std::string result;
+    mock->result(result);
+
     EXPECT_EQ(c.status(), k200OK);
-    EXPECT_EQ(mock->result(), "hello?");
-    EXPECT_GT(inSeq.size(), 1u);
-    EXPECT_EQ(inSeq[inSeq.size() - 1], 0u);
+    EXPECT_EQ(result, "hello?");
+    CHECK_IN_SEQ;
 }
 
 TEST_F(HttpApp, noDataProcessor)
 {
-    auto mock = add<TestCtrl>(HttpMethod::POST, myName);
+    auto mock = add<TestCtrl>(HttpMethod::PUT, myName);
     start();
 
     DEFAULT_MOCK_REQUEST(mock);
@@ -121,7 +135,7 @@ TEST_F(HttpApp, noDataProcessor)
     Curl b(curl());
     Curl c;
     c = std::move(b);
-    c.method(HttpMethod::POST);
+    c.method(HttpMethod::PUT);
     c.upload("hello?");
     c.perform();
     EXPECT_EQ(c.status(), k405MethodNotAllowed);

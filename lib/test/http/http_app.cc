@@ -6,6 +6,28 @@
 
 ShaCalc::ShaCalc()
 {
+    reset();
+}
+
+ShaCalc& ShaCalc::operator=(const ShaCalc& other)
+{
+    std::lock_guard<std::mutex> _(other.mutex);
+    std::lock_guard<std::mutex> __(mutex);
+
+    finished = other.finished;
+#ifdef TEST_ENABLE_OPENSSL
+    memcpy(&ctx, &other.ctx, sizeof(ctx));
+    memcpy(hash, other.hash, sizeof(hash));
+#else
+    start = other.start;
+#endif
+    return *this;
+}
+
+void ShaCalc::reset()
+{
+    std::lock_guard<std::mutex> _(mutex);
+
     finished = false;
 #ifdef TEST_ENABLE_OPENSSL
     SHA256_Init(&ctx);
@@ -16,6 +38,7 @@ ShaCalc::ShaCalc()
 }
 void ShaCalc::update(const void* in, size_t size)
 {
+    std::lock_guard<std::mutex> _(mutex);
 #ifdef TEST_ENABLE_OPENSSL
     SHA256_Update(&ctx, in, size);
 #else
@@ -29,6 +52,7 @@ void ShaCalc::update(const void* in, size_t size)
 
 void ShaCalc::final()
 {
+    std::lock_guard<std::mutex> _(mutex);
     finished = true;
 #ifdef TEST_ENABLE_OPENSSL
     SHA256_Final(hash, &ctx);
@@ -37,6 +61,7 @@ void ShaCalc::final()
 
 bool ShaCalc::operator==(const ShaCalc& other) const
 {
+    std::lock_guard<std::mutex> _(mutex);
 #ifdef TEST_ENABLE_OPENSSL
     return memcmp(hash, other.hash, sizeof(hash)) == 0;
 #else
@@ -46,6 +71,7 @@ bool ShaCalc::operator==(const ShaCalc& other) const
 
 std::string ShaCalc::format() const
 {
+    std::lock_guard<std::mutex> _(mutex);
 #ifdef TEST_ENABLE_OPENSSL
     char buffer[65];
     for (auto i = 0u; i < SHA256_DIGEST_LENGTH; i++) {
@@ -59,10 +85,10 @@ std::string ShaCalc::format() const
 
 bool calcFile(ShaCalc& calc, const std::string fullName)
 {
-    calc = ShaCalc();
-    std::ifstream file(fullName);
+    calc.reset();
+    std::ifstream file(fullName, std::ios_base::binary | std::ios_base::in);
     if (file.fail()) {
-        ERROR("open file '{}' failed: '{}'.", fullName, strerror((errno)));
+        LOG_ERROR("open file '{}' failed: '{}'.", fullName, strerror((errno)));
         return false;
     }
     const size_t bufsize = 8 * 1024;
@@ -85,7 +111,7 @@ bool calcFile(ShaCalc& calc, const std::string fullName)
     auto ret = true;
     if (file.eof()) {
         calc.final();
-        INFO("hash file '{}' success: '{}', fileSize: {}", fullName, calc.format(), i);
+        LOG_INFO("hash file '{}' success: '{}', fileSize: {}", fullName, calc.format(), i);
     } else {
         ret = false;
     }
@@ -101,13 +127,21 @@ const uint16_t HttpApp::port = 65432;
 
 void HttpApp::run()
 {
-    app->start([this]() { this->startUp.wait(); });
+    mutex_.lock();
+    app->start([this]() {
+        this->mutex_.unlock();
+        this->startUp.wait();
+    });
 }
 
 void HttpApp::start()
 {
+    mutex_.lock();
     thr = std::thread(std::bind(&HttpApp::run, this));
+    mutex_.unlock();
+
     startUp.wait();
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 }
 
 void HttpApp::SetUp()
@@ -131,4 +165,12 @@ void HttpApp::TearDown()
         delete app;
         app = nullptr;
     }
+}
+
+TEST_F(HttpApp, curlCheck)
+{
+    Curl c(Curl::CurlSchema::HTTP , "www.baidu.com", 80, "/");
+    c.setTimeout(10);
+    c.perform();
+    ASSERT_EQ(c.status(), k200OK);
 }

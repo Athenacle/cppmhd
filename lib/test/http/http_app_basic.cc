@@ -148,8 +148,21 @@ TEST_F(HttpApp, bodyInGet)
         "Connection: close\r\n"
         "\r\n"
         "Hello";
+
+#ifdef ON_WINDOWS
+    WSADATA wsaData = {0};
+    ASSERT_EQ(WSAStartup(MAKEWORD(2, 2), &wsaData), 0)
+        << fmt::format("WSAStartup failed. WSAGetLastError: {}", WSAGetLastError());
+#endif
+
     auto sock = socket(AF_INET, SOCK_STREAM, 0);
+
+#ifdef ON_WINDOWS
+    ASSERT_NE(sock, INVALID_SOCKET) << fmt::format(
+        "socket(AF_INET, SOCK_STREAM,0) failed: {}, WsGetLastError: {}", sock, WSAGetLastError());
+#else
     ASSERT_GT(sock, 0) << fmt::format("socket(AF_INET, SOCK_STREAM, 0) failed: {}", strerror(errno));
+#endif
 
     ASSERT_EQ(connect(sock, addr.getSocket(), addr.socketLen()), 0)
         << fmt::format("connect to {:a} failed: {}", addr, strerror(errno));
@@ -163,8 +176,12 @@ TEST_F(HttpApp, bodyInGet)
     ASSERT_GT(r, 0) << fmt::format("recv failed: {}", strerror(errno));
     ASSERT_LT(r, bufsize) << "received data too large.";
 
-    EXPECT_EQ(shutdown(sock, SHUT_RDWR), 0) << fmt::format("shutdown failed: {}", strerror(errno));
-    EXPECT_EQ(close(sock), 0) << fmt::format("close socket failed: {}", strerror(errno));
+#ifdef ON_WINDOWS
+    ASSERT_NE(closesocket(sock), SOCKET_ERROR)
+        << fmt::format("closesocket failed. WSGetLastError: {}", WSAGetLastError());
+#else
+    close(sock);
+#endif
 
     Regex output;
     ASSERT_TRUE(Regex::compileRegex(output, "^HTTP/1.1 400 Bad Request"));

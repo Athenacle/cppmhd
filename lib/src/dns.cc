@@ -1,6 +1,8 @@
 #include "config.h"
 
+#ifdef HAVE_INC_NETDB
 #include <netdb.h>
+#endif
 
 #define FORMAT_INETADDRESS
 
@@ -10,13 +12,8 @@
 
 #ifdef ENABLE_CARES
 #include <ares.h>
-#else
-#error "InetAddress::fromDomain has not been implemented"
-#endif
 
 using namespace cppmhd;
-
-#ifdef ENABLE_CARES
 
 bool InetAddress::inited = false;
 
@@ -44,7 +41,7 @@ void DnsQueryCallback(void* arg, int status, int, struct hostent* result)
     assert(obj);
 
     if (unlikely(result == nullptr || status != ARES_SUCCESS)) {
-        ERROR("Failed to lookup '{}': {}", obj->query, ares_strerror(status));
+        LOG_ERROR("Failed to lookup '{}': {}", obj->query, ares_strerror(status));
         return;
     }
 
@@ -53,16 +50,17 @@ void DnsQueryCallback(void* arg, int status, int, struct hostent* result)
         auto type = result->h_addrtype;
         auto data = result->h_addr_list[i];
         if (type == AF_INET) {
-            auto sock = reinterpret_cast<sockaddr_in*>(data);
-
-            if (InetAddress::from(addr, sock, obj->port)) {
-                INFO("Reslove '{}' to '{:h}'", obj->query, addr);
+            sockaddr_in sock;
+            memcpy(&sock.sin_addr, data, result->h_length);
+            if (InetAddress::from(addr, &sock, obj->port)) {
+                LOG_INFO("Reslove '{}' to '{:h}'", obj->query, addr);
                 obj->out.emplace_back(addr);
             }
         } else if (type == AF_INET6) {
-            auto sock = reinterpret_cast<sockaddr_in6*>(data);
-            if (InetAddress::from(addr, sock, obj->port)) {
-                INFO("Reslove '{}' to '{:h}'", obj->query, addr);
+            sockaddr_in6 sock;
+            memcpy(&sock.sin6_addr, data, result->h_length);
+            if (InetAddress::from(addr, &sock, obj->port)) {
+                LOG_INFO("Reslove '{}' to '{:h}'", obj->query, addr);
                 obj->out.emplace_back(addr);
             }
         }
@@ -78,7 +76,7 @@ bool InetAddress::fromHost(std::vector<InetAddress>& out, const std::string& in,
         sc = ares_library_init(ARES_LIB_INIT_ALL);
 
         if (unlikely(sc != 0)) {
-            ERROR("c-ares libraries init failed: {}", ares_strerror(sc));
+            LOG_ERROR("c-ares libraries init failed: {}", ares_strerror(sc));
             return false;
         } else {
             atexit(cleanUpCares);
@@ -89,7 +87,7 @@ bool InetAddress::fromHost(std::vector<InetAddress>& out, const std::string& in,
     ares_channel ch;
     sc = ares_init(&ch);
     if (sc != ARES_SUCCESS) {
-        ERROR("c-ares init channel failed: {}", ares_strerror(sc));
+        LOG_ERROR("c-ares init channel failed: {}", ares_strerror(sc));
         return false;
     }
 
@@ -118,4 +116,42 @@ bool InetAddress::fromHost(std::vector<InetAddress>& out, const std::string& in,
 
     return obj.out.size() > 0;
 }
+#elif defined ON_WINDOWS
+
+#include <WinDNS.h>
+#include <WinSock.h>
+#pragma comment(lib, "Dnsapi.lib")
+
+
+bool InetAddress::fromHost(std::vector<InetAddress>& out, const std::string& in, uint16_t port)
+{
+    WORD type = DNS_TYPE_A;
+    DWORD option = DNS_QUERY_STANDARD;
+    DNS_RECORD* res;
+    auto rc = DnsQuery(in.c_str(), type, option, nullptr, &res, nullptr);
+
+    if (rc == ERROR_SUCCESS) {
+        InetAddress addr;
+        auto cur = res;
+        while (cur) {
+            if (cur->wType == DNS_TYPE_A) {
+                auto& ip = cur->Data.A.IpAddress;
+                struct sockaddr_in sock;
+                sock.sin_addr.s_addr = ip;
+                sock.sin_family = AF_INET;
+                sock.sin_port = htons(port);
+                if (InetAddress::from(addr, &sock, port)) {
+                    LOG_INFO("Reslove '{}' to '{:h}'", in, addr);
+                    out.emplace_back(addr);
+                }
+            }
+            cur = cur->pNext;
+        }
+    }
+    DnsRecordListFree(res, DnsFreeRecordList);
+    return out.size() > 0;
+}
+
+#else
+#error "InetAddress::fromDomain has not been implemented"
 #endif

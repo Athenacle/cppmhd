@@ -247,10 +247,7 @@ struct RawBuilder {
 
     vector<MethodTree> trees_;
 
-    RawBuilder()
-    {
-        trees_.reserve(10);
-    }
+    RawBuilder() {}
 
     RawTree &getMethodTree(HttpMethod mth)
     {
@@ -268,7 +265,7 @@ struct RawBuilder {
 
     bool insert(const string &path, HttpMethod mth, HttpControllerPtr ctrl)
     {
-        TRACE("Add Route '{}' to '{}'", mth, path);
+        LOG_TRACE("Add Route '{}' to '{}'", mth, path);
         return getMethodTree(mth).addRoute(path, ctrl);
     }
 
@@ -342,7 +339,7 @@ bool PathParser::parsePathSegment(PathParser &parser, const string &path)
 {
     auto &rs = getRegex();
     if (unlikely(!rs.route.match(path))) {
-        ERROR("Bad Route Pattern {}, skip", path);
+        LOG_ERROR("Bad Route Pattern {}, skip", path);
         return false;
     }
 
@@ -413,11 +410,11 @@ bool PathParser::parsePathSegment(PathParser &parser, const string &path)
 
                 p.emplace(move(m));
             } else {
-                ERROR("Compile regex pattern '{}' in path '{}' failed. skip...", m.pattern, path);
+                LOG_ERROR("Compile regex pattern '{}' in path '{}' failed. skip...", m.pattern, path);
                 failed = false;
             }
         } else {
-            ERROR("Unknown URI segment '{} of path '{}', skip...", part, path);
+            LOG_ERROR("Unknown URI segment '{} of path '{}', skip...", part, path);
             failed = false;
         }
     }
@@ -431,7 +428,7 @@ bool PathParser::parsePathSegment(PathParser &parser, const string &path)
     }
 
     if (unlikely(warn)) {
-        INFO("None-Standard Router Pattern '{}'. Change to '{}'", path, full);
+        LOG_INFO("None-Standard Router Pattern '{}'. Change to '{}'", path, full);
     }
 
 #ifndef NDEBUG
@@ -510,7 +507,7 @@ bool RawTree::insert(RawNode *node, string &path, PathParser &parser, HttpContro
                     && (node->path.length() >= path.length() || path[node->path.length()] == '/')) {
                     continue;
                 } else {
-                    ERROR("wildcard conflict {}", fullPath);
+                    LOG_ERROR("wildcard conflict {}", fullPath);
                     return false;
                 }
             }
@@ -541,7 +538,7 @@ bool RawTree::insert(RawNode *node, string &path, PathParser &parser, HttpContro
         }
 
         if (node->handle) {
-            ERROR("Handle to {} already exists.", fullPath);
+            LOG_ERROR("Handle to {} already exists.", fullPath);
             return false;
         } else {
             node->handle = ctrl;
@@ -564,7 +561,7 @@ bool RawTree::insertChild(
         parser.params.pop();
 
         if (node->children.size() > 0) {
-            ERROR("Wildcard segment {} conflicts with existing child in path {}", wild.pattern, fullPath);
+            LOG_ERROR("Wildcard segment {} conflicts with existing child in path {}", wild.pattern, fullPath);
             return false;
         }
 
@@ -654,7 +651,7 @@ void RawBuilder::sort()
     std::sort(trees_.begin(), trees_.end(), [&dispatchMethod](const MethodTree &first, const MethodTree &second) {
         auto mtd1 = get<0>(first);
         auto mtd2 = get<0>(second);
-        return dispatchMethod(mtd1) <= dispatchMethod(mtd2);
+        return dispatchMethod(mtd1) < dispatchMethod(mtd2);
     });
 }
 
@@ -671,7 +668,7 @@ HttpController *Router::forward(HttpRequest *req, map<string, string> &params, b
 #ifndef NDEBUG
 #define TSR_CHECK                                                                                         \
     do {                                                                                                  \
-        DEBUG(                                                                                            \
+        LOG_DEBUG(                                                                                        \
             "TSR check, incoming Request path: '{}', now checking path: '{}', node path '{}', node type " \
             "{}, result: {}",                                                                             \
             req->getPath(),                                                                               \
@@ -792,7 +789,7 @@ HttpController *Router::forward(HttpRequest *req, map<string, string> &params, b
                             case RouterNodeType::UNKNOWN:
                             case RouterNodeType::ROOT:
                             default:
-                                DEBUG("un-expect RouterTreeNode: {}", node->type());
+                                LOG_DEBUG("un-expect RouterTreeNode: {}", node->type());
                                 continue;
                         }
                     }
@@ -917,7 +914,7 @@ void RouterBuilder::add(const std::string &prefix, RouterBuilder &subRoutes)
 {
     auto &re = getRegex();
     if (unlikely(!re.subRoute.match(prefix))) {
-        ERROR("Bad Sub Route Prefix. Prefix must match '{}'", URL_SUBROUTE_PREFIX_PATTERN);
+        LOG_ERROR("Bad Sub Route Prefix. Prefix must match '{}'", URL_SUBROUTE_PREFIX_PATTERN);
         return;
     }
 

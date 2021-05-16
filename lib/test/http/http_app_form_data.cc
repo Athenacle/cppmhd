@@ -34,7 +34,7 @@ class FormCtrl : public FormDataProcessorController
 
             if (keyName == "random") {
                 random.update(data, size);
-            } else if (keyName == "file" && fileName == "unittest") {
+            } else if (keyName == "file" && fileName == MY_BINARY_FILENAME) {
                 file.update(data, size);
             } else {
                 value.emplace(keyName, std::string(reinterpret_cast<const char*>(data), size));
