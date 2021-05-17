@@ -26,7 +26,6 @@ void cleanUpCares()
 }
 
 struct CaresQueryObject {
-    int status;
     uint16_t port;
     const std::string& query;
     std::vector<InetAddress>& out;

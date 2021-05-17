@@ -687,9 +687,8 @@ HttpController *Router::forward(HttpRequest *req, map<string, string> &params, b
         if (t.mtd == req->getMethod()) {
             auto node = t.root;
             auto path = req->getPathString();
-            bool continueWhile;
             while (true) {
-                continueWhile = false;
+                bool continueWhile = false;
                 auto &prefix = node->path();
 
                 if (likely(path.size() > prefix.size())) {

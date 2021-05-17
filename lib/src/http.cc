@@ -71,6 +71,14 @@ struct ConnectionObject {
 #ifndef NDEBUG
     size_t time;
 #endif
+    ConnectionObject(const ConnectionObject &other)
+    {
+        raw = other.raw;
+        ctrl = other.ctrl;
+        request = other.request;
+        response = other.response;
+    }
+
     template <class... Args>
     ConnectionObject(Args &&...args)
     {

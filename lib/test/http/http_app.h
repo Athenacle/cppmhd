@@ -55,7 +55,7 @@ struct ShaCalc {
     std::string format() const;
 };
 
-bool calcFile(ShaCalc& calc, const std::string fullName);
+bool calcFile(ShaCalc& calc, const std::string& fullName);
 
 class TestCtrl : public HttpController
 {

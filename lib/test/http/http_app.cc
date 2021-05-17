@@ -83,7 +83,7 @@ std::string ShaCalc::format() const
 #endif
 }
 
-bool calcFile(ShaCalc& calc, const std::string fullName)
+bool calcFile(ShaCalc& calc, const std::string& fullName)
 {
     calc.reset();
     std::ifstream file(fullName, std::ios_base::binary | std::ios_base::in);
