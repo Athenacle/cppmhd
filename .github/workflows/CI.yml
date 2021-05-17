@@ -155,3 +155,10 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           directory: ${{ github.workspace }}/build/coverage
           flags: unittest
+
+      - name: "[Linux]-Clang-coverage-upload-codacy"
+        if: matrix.buildname == 'ubuntu-20.04/clang'
+        uses: codacy/codacy-coverage-reporter-action@1.0.0
+        with:
+          project-token: ${{ secrets.CODACY_TOKEN }}
+          coverage-reports: ${{ github.workspace }}/build/coverage/lcov.info

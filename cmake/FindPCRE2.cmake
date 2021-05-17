@@ -56,6 +56,8 @@ if ((NOT ${_PCRE2_VERSION}) OR ("${_PCRE2_VERSION}" STREQUAL ""))
     string(STRIP "${_PCRE2_MAJOR}" MAJ_V)
     string(STRIP "${_PCRE2_MINOR}" MIN_V)
     set(PCRE2_VERSION "${MAJ_V}.${MIN_V}")
+else ()
+    set(PCRE2_VERSION ${_PCRE2_VERSION})
 endif ()
 
 foreach (_comp IN LISTS PCRE2_FIND_COMPONENTS)
