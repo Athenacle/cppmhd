@@ -46,12 +46,7 @@ endif ()
 
 foreach (T IN LISTS LIBS)
     add_sanitizers(${T})
-    #target_compile_definitions(${T} PUBLIC "-D$<$<CONFIG:Debug>:_DEBUG>"
-    #                                       "-D$<$<CONFIG:Release>:NDEBUG>")
-    #target_compile_options(${T} PUBLIC "$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Debug>>:/MTd>")
-    #target_link_options(${T} PUBLIC "$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Debug>>:/DEBUG:FULL>")
-
-    target_include_directories(${T} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_include_directories(${T} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_BINARY_DIR})
     target_link_libraries(${T} PUBLIC MHD::MHD PCRE2::8 fmt::fmt Threads::Threads
                                       "$<$<TARGET_EXISTS:CARES::CARES>:CARES::CARES>")
 endforeach ()
@@ -73,7 +68,6 @@ if (BUILD_TESTS)
     add_subdirectory(test)
 endif ()
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/config.h
-               @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_BINARY_DIR}/config.h @ONLY)
 
 put_all_targets_into_coverage(EXCLUDES test/*)
