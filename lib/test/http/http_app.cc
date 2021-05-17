@@ -11,8 +11,8 @@ ShaCalc::ShaCalc()
 
 ShaCalc& ShaCalc::operator=(const ShaCalc& other)
 {
-    std::lock_guard<std::mutex> _(other.mutex);
-    std::lock_guard<std::mutex> __(mutex);
+    std::lock_guard<std::mutex> __(other.mutex);
+    std::lock_guard<std::mutex> ___(mutex);
 
     finished = other.finished;
 #ifdef TEST_ENABLE_OPENSSL
@@ -26,7 +26,7 @@ ShaCalc& ShaCalc::operator=(const ShaCalc& other)
 
 void ShaCalc::reset()
 {
-    std::lock_guard<std::mutex> _(mutex);
+    std::lock_guard<std::mutex> __(mutex);
 
     finished = false;
 #ifdef TEST_ENABLE_OPENSSL
@@ -38,7 +38,7 @@ void ShaCalc::reset()
 }
 void ShaCalc::update(const void* in, size_t size)
 {
-    std::lock_guard<std::mutex> _(mutex);
+    std::lock_guard<std::mutex> __(mutex);
 #ifdef TEST_ENABLE_OPENSSL
     SHA256_Update(&ctx, in, size);
 #else
@@ -52,7 +52,7 @@ void ShaCalc::update(const void* in, size_t size)
 
 void ShaCalc::final()
 {
-    std::lock_guard<std::mutex> _(mutex);
+    std::lock_guard<std::mutex> __(mutex);
     finished = true;
 #ifdef TEST_ENABLE_OPENSSL
     SHA256_Final(hash, &ctx);
@@ -61,7 +61,7 @@ void ShaCalc::final()
 
 bool ShaCalc::operator==(const ShaCalc& other) const
 {
-    std::lock_guard<std::mutex> _(mutex);
+    std::lock_guard<std::mutex> __(mutex);
 #ifdef TEST_ENABLE_OPENSSL
     return memcmp(hash, other.hash, sizeof(hash)) == 0;
 #else
@@ -71,7 +71,7 @@ bool ShaCalc::operator==(const ShaCalc& other) const
 
 std::string ShaCalc::format() const
 {
-    std::lock_guard<std::mutex> _(mutex);
+    std::lock_guard<std::mutex> __(mutex);
 #ifdef TEST_ENABLE_OPENSSL
     char buffer[65];
     for (auto i = 0u; i < SHA256_DIGEST_LENGTH; i++) {
@@ -169,7 +169,7 @@ void HttpApp::TearDown()
 
 TEST_F(HttpApp, curlCheck)
 {
-    Curl c(Curl::CurlSchema::HTTP , "www.baidu.com", 80, "/");
+    Curl c(Curl::CurlSchema::HTTP, "www.baidu.com", 80, "/");
     c.setTimeout(10);
     c.perform();
     ASSERT_EQ(c.status(), k200OK);

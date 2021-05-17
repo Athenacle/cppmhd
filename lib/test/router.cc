@@ -4,10 +4,10 @@
 
 #include <random>
 
+#include "format.h"
 #include "logger.h"
 #include "test.h"
 #include "utils.h"
-#include "format.h"
 
 using namespace cppmhd;
 using std::move;
@@ -37,9 +37,9 @@ class TestHttpController : public HttpController
     mutable const void* ptr;
 
   public:
-    void setPtr(const void* ptr) const
+    void setPtr(const void* p) const
     {
-        this->ptr = ptr;
+        this->ptr = p;
     }
     TestHttpController(const std::string& path) : path(path)
     {

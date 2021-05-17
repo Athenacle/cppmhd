@@ -46,7 +46,7 @@ struct ShaCalc {
 
     operator bool() const
     {
-        std::lock_guard<std::mutex> _(mutex);
+        std::lock_guard<std::mutex> lock(mutex);
         return finished;
     }
 
