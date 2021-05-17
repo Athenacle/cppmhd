@@ -81,7 +81,7 @@ void SimpleSTDOUTLogger::fflush()
 
 SimpleSTDOUTLogger::~SimpleSTDOUTLogger() {}
 
-std::atomic<uint8_t> level
+std::atomic<LogLevel> level
 #ifndef NDEBUG
     (LogLevel::kTrace);
 #else

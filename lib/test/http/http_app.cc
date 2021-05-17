@@ -93,7 +93,7 @@ bool calcFile(ShaCalc& calc, const std::string fullName)
     }
     const size_t bufsize = 8 * 1024;
     auto buffer = new char[bufsize];
-    size_t i = 0;
+    std::streamsize i = 0;
     do {
         file.read(buffer, bufsize);
         auto s = file.gcount();

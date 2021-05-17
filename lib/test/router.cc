@@ -17,10 +17,9 @@ void print(const std::vector<std::string>& i, std::string& out)
     out.clear();
     std::for_each(i.begin(), i.end(), [&out](const std::string& i) { out = out.append("/").append(i); });
 }
-
-uint64_t fact(uint8_t i)
+size_t fact(uint8_t i)
 {
-    uint64_t ret = 1;
+    size_t ret = 1;
     for (uint8_t j = 1; j <= i; j++) {
         ret = ret * j;
     }
