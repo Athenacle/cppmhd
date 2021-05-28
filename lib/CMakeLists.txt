@@ -2,7 +2,6 @@ aux_source_directory(src MHDSRC)
 find_package(Threads)
 find_package(Sanitizers)
 
-add_code_coverage_all_targets(ALL)
 
 include(CMakeDependentOption)
 
@@ -69,5 +68,3 @@ if (BUILD_TESTS)
 endif ()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_BINARY_DIR}/config.h @ONLY)
-
-put_all_targets_into_coverage(EXCLUDES test/*)

@@ -1,8 +1,6 @@
 #include <cppmhd/app.h>
 #include <cppmhd/entity.h>
 
-#include <gmock/gmock.h>
-
 #include "entity.h"
 #include "utils.h"
 
@@ -19,6 +17,9 @@ using namespace cppmhd;
 #define MY_BINARY_FILENAME STRINGIFY(UNITTEST_FILENAME)
 #endif
 
+#ifndef NO_GMOCK
+
+#include <gmock/gmock.h>
 
 class SignalHandler
 {
@@ -35,6 +36,8 @@ class SHMock : public SignalHandler
     SHMock() = default;
     virtual ~SHMock() {}
 };
+
+#endif
 
 class TestRequest : public HttpRequest
 {
