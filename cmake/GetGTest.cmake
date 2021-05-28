@@ -13,7 +13,7 @@ ExternalProject_Add(
         ${GTEST_ROOT}/src/gtest-build/lib/libgtest_main.a
         ${GTEST_ROOT}/src/gtest-build/lib/libgmock_main.a
     PREFIX ${GTEST_ROOT}
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    CMAKE_ARGS -Wno-deprecated -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     LOG_INSTALL OFF
     INSTALL_COMMAND "")
