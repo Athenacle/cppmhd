@@ -14,18 +14,12 @@ jobs:
     pool:
       vmImage: "macOS-latest"
     steps:
-      - task: Cache@2
-        inputs:
-          key: "cppmhd-homebrew"
-          path: "$(VCPKG_INSTALLATION_ROOT)"
-
       - script: |
           brew install fmt pcre2 c-ares curl gnutls
           brew install openssl@1.1
           brew install pkg-config
           brew install lcov
           brew install libmicrohttpd
-          brew install googletest
         displayName: "Install Dependencies"
 
       - task: CMake@1
@@ -50,7 +44,7 @@ jobs:
       - task: Cache@2
         inputs:
           key: "cppmhd-vcpkg"
-          path: "$(VCPKG_INSTALLATION_ROOT)"
+          path: "$(VCPKG_INSTALLATION_ROOT)/installed"
 
       - script: |
           vcpkg install libmicrohttpd:x64-windows
