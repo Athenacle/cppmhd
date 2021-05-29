@@ -46,6 +46,7 @@ endif ()
 foreach (T IN LISTS LIBS)
     add_sanitizers(${T})
     target_include_directories(${T} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_BINARY_DIR})
+    target_compile_options(${T} PUBLIC "$<$<CXX_COMPILER_ID:MSVC>:/D_CRT_NONSTDC_NO_WARNINGS>")
     target_link_libraries(${T} PUBLIC MHD::MHD PCRE2::8 fmt::fmt Threads::Threads
                                       "$<$<TARGET_EXISTS:CARES::CARES>:CARES::CARES>")
 endforeach ()
