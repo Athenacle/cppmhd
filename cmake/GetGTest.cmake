@@ -5,8 +5,8 @@ set(GTEST_ROOT ${CMAKE_CURRENT_BINARY_DIR}/gtest/root CACHE FILEPATH "")
 
 ExternalProject_Add(
     gtest
-    URL https://github.com/google/googletest/archive/release-1.10.0.zip
-    URL_HASH SHA256=94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91
+    URL https://github.com/google/googletest/archive/release-1.11.0.zip
+    URL_HASH SHA256=353571c2440176ded91c2de6d6cd88ddd41401d14692ec1f99e35d013feda55a
     DOWNLOAD_NO_PROGRESS ON
     BUILD_BYPRODUCTS
         ${GTEST_ROOT}/src/gtest-build/lib/libgmock.a ${GTEST_ROOT}/src/gtest-build/lib/libgtest.a
