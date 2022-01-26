@@ -44,8 +44,10 @@ endif ()
 
 foreach (T IN LISTS LIBS)
     add_sanitizers(${T})
-    target_include_directories(${T} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-                                           "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+    target_include_directories(
+        ${T} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+                    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+        PRIVATE "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>")
 
     target_compile_options(${T} PUBLIC "$<$<CXX_COMPILER_ID:MSVC>:/D_CRT_NONSTDC_NO_WARNINGS>")
 
