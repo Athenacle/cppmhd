@@ -81,6 +81,7 @@ jobs:
       - name: "[All]-Create build directory"
         run: |
           mkdir build
+          mkdir test-project
 
       - name: "[Linux]-CMake configure"
         working-directory: ./build
@@ -129,7 +130,7 @@ jobs:
       - name: "[All]-Build"
         working-directory: ./build
         run: |
-          make
+          make install
         env:
           VERBOSE: 1
 
@@ -162,3 +163,9 @@ jobs:
         with:
           project-token: ${{ secrets.CODACY_TOKEN }}
           coverage-reports: ${{ github.workspace }}/build/coverage/lcov.info
+
+      - name: "[All]-test-project"
+        working-directory: ./test-project
+        run: |
+          cmake ../cmake/test-project -DCMAKE_BUILD_TYPE=Debug
+          make
