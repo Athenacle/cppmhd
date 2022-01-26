@@ -103,18 +103,21 @@ if (MSVC)
         wd4626 # operator = implicitly deleted
         wd4668 # macro ... not defined, treat as 0
         wd4577 # noexcept .....
+        wd4505 # function ... : unreferenced local function has been removed
         wd4514 # unreferenced inline function remove
         wd4710 # function ... not inlined
         wd5045 # spectre mitigation
+        wd4275 # non - DLL-interface class ... used as base for DLL-interface class ...
         )
 endif ()
 
-if (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+if (${CMAKE_CXX_COMPILER_ID} MATCHES "(Apple)?[Cc]lang" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
     cxx_compiler_check_add(
         Wall
         Wno-useless-cast
         Wextra
         Wpedantic
+        Wshadow
         Wduplicated-branches
         Wduplicated-cond
         Wlogical-op

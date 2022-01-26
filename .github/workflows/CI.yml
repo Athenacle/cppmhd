@@ -8,7 +8,7 @@ on:
 
 env:
   BUILD_TYPE: Debug
-  RUN_ID: "0.0.1-ci-GitHubActions-$GITHUB_SHA"
+  RUN_ID: "0.0.2-ci-GitHubActions-$GITHUB_SHA"
 
 jobs:
   unix:
@@ -81,6 +81,7 @@ jobs:
       - name: "[All]-Create build directory"
         run: |
           mkdir build
+          mkdir test-project
 
       - name: "[Linux]-CMake configure"
         working-directory: ./build
@@ -89,7 +90,7 @@ jobs:
         run: |
           [[ ${{ matrix.link  }} == "SHARED" ]] && SHARED="ON" || SHARED="OFF"
           [[ ${{ matrix.link  }} == "STATIC" ]] && STATIC="ON" || STATIC="OFF"
-          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=OFF -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=$SHARED -DBUILD_STATIC=$STATIC -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID}}
+          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=OFF -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=$SHARED -DBUILD_STATIC=$STATIC -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID}}  -DCMAKE_INSTALL_PREFIX=/usr
         env:
           THIS_ID: ${{ env.RUN_ID }}-Linux-$GITHUB_RUN_NUMBER
 
@@ -98,7 +99,7 @@ jobs:
         shell: bash
         if: ${{ matrix.compiler == 'clang_64' && runner.os == 'macOS' }}
         run: |
-          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=OFF -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID }}
+          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=OFF -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID }}  -DCMAKE_INSTALL_PREFIX=/usr
         env:
           CC: clang
           CXX: clang++
@@ -110,7 +111,7 @@ jobs:
         if: ${{ matrix.compiler == 'clang_64' && runner.os == 'Linux' }}
         run: |
           sudo apt install clang-10
-          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=ON -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=ON -DBUILD_STATIC=ON -DLLVM_COV_PATH=$(which llvm-cov-10) -DLLVM_PROFDATA_PATH=$(which llvm-profdata-10) -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID }}
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DCODE_COVERAGE=ON -DBUILD_TESTS=ON -DBUILD_SHARED=ON -DBUILD_STATIC=ON -DLLVM_COV_PATH=$(which llvm-cov-10) -DLLVM_PROFDATA_PATH=$(which llvm-profdata-10) -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID }}  -DCMAKE_INSTALL_PREFIX=/usr
         env:
           CC: clang-10
           CXX: clang++-10
@@ -120,7 +121,7 @@ jobs:
         working-directory: ./build
         if: matrix.buildname == 'ubuntu-20.04/gcc-10'
         run: |
-          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=OFF -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=ON -DBUILD_STATIC=ON -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID }}
+          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=OFF -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=ON -DBUILD_STATIC=ON -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID }}  -DCMAKE_INSTALL_PREFIX=/usr
         env:
           CC: gcc-10
           CXX: g++10
@@ -129,7 +130,15 @@ jobs:
       - name: "[All]-Build"
         working-directory: ./build
         run: |
-          make
+          make VERBOSE=1
+        env:
+          VERBOSE: 1
+
+      - name: "[Linux]-Install"
+        working-directory: ./build
+        if: ${{  runner.os == 'Linux' }}
+        run: |
+          sudo make install
         env:
           VERBOSE: 1
 
@@ -162,3 +171,13 @@ jobs:
         with:
           project-token: ${{ secrets.CODACY_TOKEN }}
           coverage-reports: ${{ github.workspace }}/build/coverage/lcov.info
+
+      - name: "[All]-test-project"
+        working-directory: ./test-project
+        shell: bash
+        if: ${{ matrix.compiler == 'clang_64' && runner.os == 'Linux' }}
+        run: |
+          cmake ../cmake/test-project -DCMAKE_BUILD_TYPE=Release
+          make
+        env:
+          VERBOSE: 1

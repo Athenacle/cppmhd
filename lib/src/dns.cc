@@ -26,12 +26,11 @@ void cleanUpCares()
 }
 
 struct CaresQueryObject {
-    int status;
-    uint16_t port;
-    const std::string& query;
-    std::vector<InetAddress>& out;
+    uint16_t port_;
+    const std::string& query_;
+    std::vector<InetAddress>& out_;
 
-    CaresQueryObject(const std::string& q, std::vector<InetAddress>& out) : query(q), out(out) {}
+    CaresQueryObject(const std::string& q, std::vector<InetAddress>& out) : query_(q), out_(out) {}
 };
 
 
@@ -41,7 +40,7 @@ void DnsQueryCallback(void* arg, int status, int, struct hostent* result)
     assert(obj);
 
     if (unlikely(result == nullptr || status != ARES_SUCCESS)) {
-        LOG_ERROR("Failed to lookup '{}': {}", obj->query, ares_strerror(status));
+        LOG_ERROR("Failed to lookup '{}': {}", obj->query_, ares_strerror(status));
         return;
     }
 
@@ -52,16 +51,16 @@ void DnsQueryCallback(void* arg, int status, int, struct hostent* result)
         if (type == AF_INET) {
             sockaddr_in sock;
             memcpy(&sock.sin_addr, data, result->h_length);
-            if (InetAddress::from(addr, &sock, obj->port)) {
-                LOG_INFO("Reslove '{}' to '{:h}'", obj->query, addr);
-                obj->out.emplace_back(addr);
+            if (InetAddress::from(addr, &sock, obj->port_)) {
+                LOG_INFO("Reslove '{}' to '{:h}'", obj->query_, addr);
+                obj->out_.emplace_back(addr);
             }
         } else if (type == AF_INET6) {
             sockaddr_in6 sock;
             memcpy(&sock.sin6_addr, data, result->h_length);
-            if (InetAddress::from(addr, &sock, obj->port)) {
-                LOG_INFO("Reslove '{}' to '{:h}'", obj->query, addr);
-                obj->out.emplace_back(addr);
+            if (InetAddress::from(addr, &sock, obj->port_)) {
+                LOG_INFO("Reslove '{}' to '{:h}'", obj->query_, addr);
+                obj->out_.emplace_back(addr);
             }
         }
     }
@@ -92,7 +91,7 @@ bool InetAddress::fromHost(std::vector<InetAddress>& out, const std::string& in,
     }
 
     CaresQueryObject obj(in, out);
-    obj.port = port;
+    obj.port_ = port;
 
     ares_gethostbyname(ch, in.c_str(), AF_INET, DnsQueryCallback, &obj);
 
@@ -114,7 +113,7 @@ bool InetAddress::fromHost(std::vector<InetAddress>& out, const std::string& in,
 
     ares_destroy(ch);
 
-    return obj.out.size() > 0;
+    return obj.out_.size() > 0;
 }
 #elif defined ON_WINDOWS
 

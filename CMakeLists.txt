@@ -6,7 +6,7 @@ project(${PROJECT_NAME})
 
 set(MAJOR_VERSION 0)
 set(MINOR_VERSION 0)
-set(PATCH_VERSION 1)
+set(PATCH_VERSION 2)
 set(PROJECT_VERSION "${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}")
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/)
@@ -25,3 +25,6 @@ endif ()
 
 add_subdirectory(lib)
 add_subdirectory(examples)
+
+add_code_coverage_all_targets(ALL)
+put_all_targets_into_coverage(EXCLUDES test/*)

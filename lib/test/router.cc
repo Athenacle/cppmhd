@@ -4,10 +4,10 @@
 
 #include <random>
 
+#include "format.h"
 #include "logger.h"
 #include "test.h"
 #include "utils.h"
-#include "format.h"
 
 using namespace cppmhd;
 using std::move;
@@ -15,12 +15,11 @@ using std::move;
 void print(const std::vector<std::string>& i, std::string& out)
 {
     out.clear();
-    std::for_each(i.begin(), i.end(), [&out](const std::string& i) { out = out.append("/").append(i); });
+    std::for_each(i.begin(), i.end(), [&out](const std::string& ii) { out = out.append("/").append(ii); });
 }
-
-uint64_t fact(uint8_t i)
+size_t fact(uint8_t i)
 {
-    uint64_t ret = 1;
+    size_t ret = 1;
     for (uint8_t j = 1; j <= i; j++) {
         ret = ret * j;
     }
@@ -29,7 +28,7 @@ uint64_t fact(uint8_t i)
 
 class TestHttpController : public HttpController
 {
-    std::string path;
+    std::string path_;
     static int i;
 
     int my;
@@ -37,11 +36,11 @@ class TestHttpController : public HttpController
     mutable const void* ptr;
 
   public:
-    void setPtr(const void* ptr) const
+    void setPtr(const void* p) const
     {
-        this->ptr = ptr;
+        this->ptr = p;
     }
-    TestHttpController(const std::string& path) : path(path)
+    TestHttpController(const std::string& path) : path_(path)
     {
         my = i++;
         ptr = nullptr;

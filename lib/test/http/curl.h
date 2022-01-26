@@ -5,6 +5,7 @@
 
 #include <curl/curl.h>
 
+#include <chrono>
 #include <cstring>
 #include <map>
 #include <string>
@@ -43,6 +44,8 @@ class Curl
 
     Curl(const Curl&) = delete;
     Curl& operator=(const Curl&) = delete;
+
+    void setTimeoutMS(uint32_t);
 
   public:
     Curl(Curl&& other);
@@ -92,7 +95,17 @@ class Curl
     {
         return headers_;
     }
-    void setTimeout(long to);
+
+    void setTimeout(uint32_t seconds)
+    {
+        return setTimeout(std::chrono::seconds(seconds));
+    }
+
+    template <class R, class P>
+    void setTimeout(const std::chrono::duration<R, P>& dur)
+    {
+        setTimeoutMS(std::chrono::duration_cast<std::chrono::milliseconds>(dur).count());
+    }
 
     const std::string& body() const
     {

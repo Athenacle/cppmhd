@@ -19,12 +19,12 @@ class SHHandler : public ActionInterface<void(App &, int)>
     void Perform(const std::tuple<App &, int> &args)
     {
         const auto &app = std::get<0>(args);
-        const auto sig = std::get<1>(args);
+        const auto sigNo = std::get<1>(args);
         EXPECT_EQ(app.host(), h);
-        EXPECT_EQ(sig, this->sig);
+        EXPECT_EQ(sigNo, this->sig);
     }
 
-    SHHandler(std::string &host, int sig) : h(host), sig(sig) {}
+    SHHandler(std::string &host, int sig_) : h(host), sig(sig_) {}
     virtual ~SHHandler() {}
 };
 

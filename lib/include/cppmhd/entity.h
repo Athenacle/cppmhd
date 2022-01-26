@@ -82,7 +82,7 @@ class HttpResponse
     using BodyType = std::tuple<size_t, const void*, bool>;
 
   private:
-    HttpStatusCode sc;
+    HttpStatusCode sc_;
 
     HeaderType headers_;
 
@@ -123,12 +123,12 @@ class HttpResponse
 
     void status(HttpStatusCode sc)
     {
-        this->sc = sc;
+        this->sc_ = sc;
     }
 
     HttpStatusCode status() const
     {
-        return sc;
+        return sc_;
     }
 };
 using HttpResponsePtr = std::shared_ptr<HttpResponse>;

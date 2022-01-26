@@ -71,6 +71,14 @@ struct ConnectionObject {
 #ifndef NDEBUG
     size_t time;
 #endif
+    ConnectionObject(const ConnectionObject &other)
+    {
+        raw = other.raw;
+        ctrl = other.ctrl;
+        request = other.request;
+        response = other.response;
+    }
+
     template <class... Args>
     ConnectionObject(Args &&...args)
     {
@@ -440,7 +448,7 @@ CPPMHD_Error HttpImplement::startMHDDaemon(uint32_t tc,
                                            const std::vector<int> &sigs)
 {
     auto flag = calcFlag();
-    if (addr.isV6()) {
+    if (addr_.isV6()) {
         flag |= MHD_USE_DUAL_STACK;
     }
 
@@ -450,7 +458,7 @@ CPPMHD_Error HttpImplement::startMHDDaemon(uint32_t tc,
         tc = next;
     }
 
-    auto sock = addr.getSocket();
+    auto sock = addr_.getSocket();
 
     MHD_OptionItem ops[] = {
         {MHD_OPTION_EXTERNAL_LOGGER, (intptr_t)MHD_LOGGER, this},
@@ -470,9 +478,9 @@ CPPMHD_Error HttpImplement::startMHDDaemon(uint32_t tc,
         std::lock_guard<std::mutex> _(global::mutex);
         for (auto i = 0u; i < tc; i++) {
             auto d = MHD_start_daemon(
-                flag, addr.port(), MHDAcceptCB, this, MHDconnectionCB, this, MHD_OPTION_ARRAY, ops, MHD_OPTION_END);
+                flag, addr_.port(), MHDAcceptCB, this, MHDconnectionCB, this, MHD_OPTION_ARRAY, ops, MHD_OPTION_END);
             if (d != nullptr) {
-                LOG_INFO("#{}: begin listening at {}", i, addr);
+                LOG_INFO("#{}: begin listening at {}", i, addr_);
                 daemons.emplace_back(d);
             } else {
                 LOG_ERROR("#{}: listen failed: {}, stop running threads", i, strerror(errno));
@@ -499,11 +507,11 @@ CPPMHD_Error HttpImplement::startMHDDaemon(uint32_t tc,
     }
 #endif
 
-    running = true;
-    thr = std::thread(startWait, &runningBarrier_);
+    running_ = true;
+    thr_ = std::thread(startWait, &runningBarrier_);
     cb();
-    thr.join();
-    running = false;
+    thr_.join();
+    running_ = false;
     {
         std::lock_guard<std::mutex> _(global::mutex);
         LOG_INFO("{}", "stopping MHD daemon...");
@@ -517,9 +525,9 @@ CPPMHD_Error HttpImplement::startMHDDaemon(uint32_t tc,
 
 HttpResponsePtr HttpImplement::checkRequest(const HttpRequestPtr &req, const char *version)
 {
-    if (host.length() != 0) {
+    if (host_.length() != 0) {
         auto h = req->getHeader(CPPMHD_HTTP_HEADER_HOST);
-        if (h == nullptr || strcmp(h, host.c_str()) != 0) {
+        if (h == nullptr || strcmp(h, host_.c_str()) != 0) {
             return getErrorHandler()(
                 req, k400BadRequest, HttpError::HOST_FIELD_INCORRECT, "Host Field Not Set Correctly");
         }
