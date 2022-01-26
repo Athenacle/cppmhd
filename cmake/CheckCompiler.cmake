@@ -107,10 +107,11 @@ if (MSVC)
         wd4514 # unreferenced inline function remove
         wd4710 # function ... not inlined
         wd5045 # spectre mitigation
+        wd4275 # non - DLL-interface class ... used as base for DLL-interface class ...
         )
 endif ()
 
-if (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+if (${CMAKE_CXX_COMPILER_ID} MATCHES "(Apple)?[Cc]lang" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
     cxx_compiler_check_add(
         Wall
         Wno-useless-cast
