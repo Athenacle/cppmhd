@@ -31,24 +31,24 @@ class HttpImplement
 {
     std::vector<MHD_Daemon *> daemons;
 
-    InetAddress addr;
+    InetAddress addr_;
     Barrier runningBarrier_;
-    Router router;
-    std::thread thr;
-    std::atomic_bool running;
-    const App::errorHandler &eh;
+    Router router_;
+    std::thread thr_;
+    std::atomic_bool running_;
+    const App::errorHandler &eh_;
 
-    std::string host;
+    std::string host_;
 
-    bool logConnectionStatus;
+    bool logConnectionStatus_;
 
   public:
     HttpImplement(const InetAddress &ad, Router &&r, std::string &host, const App::errorHandler &eh)
-        : addr(ad), runningBarrier_(2), router(std::move(r)), eh(eh), host(host)
+        : addr_(ad), runningBarrier_(2), router_(std::move(r)), eh_(eh), host_(host)
     {
-        running = false;
+        running_ = false;
 
-        logConnectionStatus =
+        logConnectionStatus_ =
 #ifdef NDEBUG
             false;
 #else
@@ -58,12 +58,12 @@ class HttpImplement
 
     bool isLogConnectionStatus()
     {
-        return logConnectionStatus;
+        return logConnectionStatus_;
     }
 
     const App::errorHandler &getErrorHandler() const
     {
-        return eh;
+        return eh_;
     }
 
     CPPMHD_Error startMHDDaemon(uint32_t threadCount,
@@ -72,24 +72,24 @@ class HttpImplement
 
     HttpController *forward(HttpRequest *req, std::map<std::string, std::string> &param, bool &tsr) const
     {
-        return router.forward(req, param, tsr);
+        return router_.forward(req, param, tsr);
     }
 
     void stop();
 
     bool isV6() const
     {
-        return addr.isV6();
+        return addr_.isV6();
     }
 
     const InetAddress &getAddr() const
     {
-        return addr;
+        return addr_;
     }
 
     bool isRunning() const
     {
-        return running;
+        return running_;
     }
 
     HttpResponsePtr checkRequest(const HttpRequestPtr &, const char *);

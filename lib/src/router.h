@@ -188,34 +188,34 @@ class RouterTrees
 {
     friend class Router;
 
-    HttpMethod mtd;
-    RouterNode* root;
+    HttpMethod mtd_;
+    RouterNode* root_;
 
   public:
     RouterTrees(RouterTrees&& other)
     {
-        mtd = other.mtd;
-        root = other.root;
-        other.root = nullptr;
+        mtd_ = other.mtd_;
+        root_ = other.root_;
+        other.root_ = nullptr;
     }
-    RouterTrees(HttpMethod mtd, RouterNode* root) : mtd(mtd)
+    RouterTrees(HttpMethod mtd, RouterNode* root) : mtd_(mtd)
     {
-        this->root = root;
+        this->root_ = root;
     }
 
     ~RouterTrees();
 
     const RouterNode* getTree() const
     {
-        return root;
+        return root_;
     }
     RouterNode* getTree()
     {
-        return root;
+        return root_;
     }
     HttpMethod getHttpMethod() const
     {
-        return mtd;
+        return mtd_;
     }
 };
 
