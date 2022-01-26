@@ -80,7 +80,8 @@ set(project_config_in "${CMAKE_SOURCE_DIR}/cmake/cppmhdConfig.cmake.in")
 set(project_config_out "${CMAKE_CURRENT_BINARY_DIR}/cppmhdConfig.cmake")
 set(config_targets_file "cppmhdConfigTargets.cmake")
 set(version_config_file "${CMAKE_CURRENT_BINARY_DIR}/cppmhdConfigVersion.cmake")
-set(export_dest_dir "${CMAKE_INSTALL_LIBDIR}/cmake/cppmhd")
+set(export_dest_dir "${CMAKE_INSTALL_LIBDIR}/cmake/cppmhd"
+    CACHE PATH "Installation directory for cmake files")
 
 include(GNUInstallDirs)
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
