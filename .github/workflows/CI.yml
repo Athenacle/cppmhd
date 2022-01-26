@@ -99,7 +99,7 @@ jobs:
         shell: bash
         if: ${{ matrix.compiler == 'clang_64' && runner.os == 'macOS' }}
         run: |
-          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=OFF -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DSANITIZE_UNDEFINED=ON -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID }}  -DCMAKE_INSTALL_PREFIX=/usr
+          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=OFF -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID }}  -DCMAKE_INSTALL_PREFIX=/usr
         env:
           CC: clang
           CXX: clang++
