@@ -15,7 +15,7 @@ using std::move;
 void print(const std::vector<std::string>& i, std::string& out)
 {
     out.clear();
-    std::for_each(i.begin(), i.end(), [&out](const std::string& i) { out = out.append("/").append(i); });
+    std::for_each(i.begin(), i.end(), [&out](const std::string& ii) { out = out.append("/").append(ii); });
 }
 size_t fact(uint8_t i)
 {
@@ -28,7 +28,7 @@ size_t fact(uint8_t i)
 
 class TestHttpController : public HttpController
 {
-    std::string path;
+    std::string path_;
     static int i;
 
     int my;
@@ -40,7 +40,7 @@ class TestHttpController : public HttpController
     {
         this->ptr = p;
     }
-    TestHttpController(const std::string& path) : path(path)
+    TestHttpController(const std::string& path) : path_(path)
     {
         my = i++;
         ptr = nullptr;

@@ -24,14 +24,14 @@ namespace
 {
 class SimpleControllerWrapper : public HttpController
 {
-    SimpleControllerFunction fn;
+    SimpleControllerFunction fn_;
 
   public:
-    SimpleControllerWrapper(SimpleControllerFunction &&fn) : fn(fn) {}
+    SimpleControllerWrapper(SimpleControllerFunction &&fn) : fn_(fn) {}
 
     virtual void onRequest(HttpRequestPtr req, HttpResponsePtr &resp) override
     {
-        resp = fn(req);
+        resp = fn_(req);
     }
 
     virtual ~SimpleControllerWrapper() {}
@@ -657,8 +657,8 @@ void RawBuilder::sort()
 
 RouterTrees::~RouterTrees()
 {
-    if (root != nullptr) {
-        delete root;
+    if (root_ != nullptr) {
+        delete root_;
     }
 }
 
@@ -684,8 +684,8 @@ HttpController *Router::forward(HttpRequest *req, map<string, string> &params, b
     tsr = false;
 
     for (const auto &t : trees_) {
-        if (t.mtd == req->getMethod()) {
-            auto node = t.root;
+        if (t.mtd_ == req->getMethod()) {
+            auto node = t.root_;
             auto path = req->getPathString();
             while (true) {
                 bool continueWhile = false;

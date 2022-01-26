@@ -91,7 +91,8 @@ class FormProcessor : public DataProcessor
 };
 
 
-MHD_Return formIter(void *cls, MHD_ValueKind kind, ccp key, ccp fN, ccp cT, ccp tE, ccp data, uint64_t off, size_t size)
+MHD_Return formIter(
+    void *cls, MAYBE_UNUSED MHD_ValueKind kind, ccp key, ccp fN, ccp cT, ccp tE, ccp data, uint64_t off, size_t size)
 {
     MAYBE_UNUSED auto fp = reinterpret_cast<FormProcessor *>(cls);
     assert(kind == MHD_POSTDATA_KIND);
