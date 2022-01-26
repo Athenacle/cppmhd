@@ -62,6 +62,11 @@ inline bool isPrefixOfArray(const char *ct, const char (&cp)[N])
     if (ct == nullptr) {
         return false;
     }
+
+    // note: we do not set the length parameter to N, however this will make some code linter un-happy
+    // suppose we have string ct = 'multipart/form-data; boundary=------------------------d40xxx'
+    // to checkPrefix with cp[N] = 'multipart/form-data',
+    // if check length set to N, this check will fail.
     return checkPrefix(ct, cp, std::min(strlen(ct), N - 1));
 }
 

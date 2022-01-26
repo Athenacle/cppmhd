@@ -69,7 +69,7 @@ class FormProcessor : public DataProcessor
         return pp_ != nullptr;
     }
 
-    FormProcessor(MHD_Connection *conn, FormDataProcessorController *ctrl) : conn_(conn), ctrl_(ctrl) {}
+    FormProcessor(MHD_Connection *conn, FormDataProcessorController *ctrl) : conn_(conn), pp_(nullptr), ctrl_(ctrl) {}
 
     bool onData(ccp key, ccp fN, ccp cT, ccp tE, ccp data, uint64_t off, size_t size)
     {

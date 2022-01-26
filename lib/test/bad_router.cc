@@ -94,7 +94,7 @@ class MockOutput : public ActionInterface<void(log::LogLevel, s, s, int, s)>
     }
 
     template <class... Args>
-    MockOutput(Args&&... args)
+    explicit MockOutput(Args&&... args)
     {
         level = log::LogLevel::kError;
         init(std::forward<Args>(args)...);
