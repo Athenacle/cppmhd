@@ -1,7 +1,9 @@
 #include <cppmhd/app.h>
 #include <cppmhd/entity.h>
 
+#ifndef NO_GMOCK
 #include <gmock/gmock.h>
+#endif
 
 #include "entity.h"
 #include "utils.h"
