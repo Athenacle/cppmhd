@@ -50,14 +50,14 @@ class BadRouter : public Test
 class MockOutput : public ActionInterface<void(log::LogLevel, s, s, int, s)>
 {
     std::vector<Regex> res;
-    log::LogLevel level;
+    log::LogLevel level_;
 
   public:
     void Perform(const std::tuple<log::LogLevel, s, s, int, s>& args)
     {
-        auto lv = std::get<0>(args);
+        auto level = std::get<0>(args);
         auto msg = std::get<4>(args);
-        ASSERT_EQ(lv, log::LogLevel::kError);
+        ASSERT_EQ(level, log::LogLevel::kError);
 
         bool status = false;
         for (const auto& re : res) {
@@ -71,9 +71,9 @@ class MockOutput : public ActionInterface<void(log::LogLevel, s, s, int, s)>
     void add() {}
 
     template <class... Args>
-    void add(log::LogLevel lv, Args&&... args)
+    void add(log::LogLevel lv_, Args&&... args)
     {
-        level = lv;
+        level_ = lv_;
         add(std::forward<Args>(args)...);
     }
 
@@ -94,9 +94,9 @@ class MockOutput : public ActionInterface<void(log::LogLevel, s, s, int, s)>
     }
 
     template <class... Args>
-    MockOutput(Args&&... args)
+    explicit MockOutput(Args&&... args)
     {
-        level = log::LogLevel::kError;
+        level_ = log::LogLevel::kError;
         init(std::forward<Args>(args)...);
     }
 };

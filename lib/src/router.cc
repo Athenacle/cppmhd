@@ -24,14 +24,14 @@ namespace
 {
 class SimpleControllerWrapper : public HttpController
 {
-    SimpleControllerFunction fn;
+    SimpleControllerFunction fn_;
 
   public:
-    SimpleControllerWrapper(SimpleControllerFunction &&fn) : fn(fn) {}
+    SimpleControllerWrapper(SimpleControllerFunction &&fn) : fn_(fn) {}
 
     virtual void onRequest(HttpRequestPtr req, HttpResponsePtr &resp) override
     {
-        resp = fn(req);
+        resp = fn_(req);
     }
 
     virtual ~SimpleControllerWrapper() {}
@@ -434,10 +434,10 @@ bool PathParser::parsePathSegment(PathParser &parser, const string &path)
 #ifndef NDEBUG
     {
         // count of -1 in calc must be equal with `parser.params.size()';
-        size_t i = 0, count = 0;
+        size_t count = 0;
         auto ptr = calc.c_str();
-        for (; i < calc.length(); i++) {
-            if (ptr[i] == PARAM_CHAR) {
+        for (auto j = 0u; j < calc.length(); j++) {
+            if (ptr[j] == PARAM_CHAR) {
                 count++;
             }
         }
@@ -586,11 +586,11 @@ bool RawTree::insertChild(
 
             if (static_cast<size_t>(1) < path.length()) {
                 path = path.substr(1);
-                auto child = new RawNode;
-                child->type = RouterNodeType::UNKNOWN;
-                node->children.emplace_back(child);
-                child->indices = path[0];
-                node = child;
+                auto nChild = new RawNode;
+                nChild->type = RouterNodeType::UNKNOWN;
+                node->children.emplace_back(nChild);
+                nChild->indices = path[0];
+                node = nChild;
                 continue;
             }
 
@@ -657,8 +657,8 @@ void RawBuilder::sort()
 
 RouterTrees::~RouterTrees()
 {
-    if (root != nullptr) {
-        delete root;
+    if (root_ != nullptr) {
+        delete root_;
     }
 }
 
@@ -684,12 +684,11 @@ HttpController *Router::forward(HttpRequest *req, map<string, string> &params, b
     tsr = false;
 
     for (const auto &t : trees_) {
-        if (t.mtd == req->getMethod()) {
-            auto node = t.root;
+        if (t.mtd_ == req->getMethod()) {
+            auto node = t.root_;
             auto path = req->getPathString();
-            bool continueWhile;
             while (true) {
-                continueWhile = false;
+                bool continueWhile = false;
                 auto &prefix = node->path();
 
                 if (likely(path.size() > prefix.size())) {

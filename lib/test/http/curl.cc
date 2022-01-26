@@ -74,9 +74,9 @@ size_t uploadData(char *ptr, size_t size, size_t nmemb, void *userp)
 }  // namespace
 
 
-void Curl::setTimeout(long to)
+void Curl::setTimeoutMS(uint32_t ms)
 {
-    CURL_PROCESS(curl_easy_setopt(curl, CURLOPT_TIMEOUT, 2000l));
+    CURL_PROCESS(curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, ms));
 }
 
 void Curl::perform()
@@ -144,7 +144,7 @@ void Curl::setup()
     CURL_PROCESS(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteDataCB));
     CURL_PROCESS(curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, curlHeaderCB));
     CURL_PROCESS(curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, ""));
-    setTimeout(3);
+    setTimeout(std::chrono::seconds(3));
 }
 
 const void *Curl::upload(size_t &size)

@@ -1,7 +1,9 @@
 #include <cppmhd/app.h>
 #include <cppmhd/entity.h>
 
+#ifndef NO_GMOCK
 #include <gmock/gmock.h>
+#endif
 
 #include "entity.h"
 #include "utils.h"
@@ -38,19 +40,19 @@ class SHMock : public SignalHandler
 
 class TestRequest : public HttpRequest
 {
-    HttpMethod mtd;
-    std::string path;
-    std::map<std::string, std::string> param;
+    HttpMethod mtd_;
+    std::string path_;
+    std::map<std::string, std::string> param_;
 
   public:
     virtual const char* getPath() const override
     {
-        return path.c_str();
+        return path_.c_str();
     }
 
     virtual HttpMethod getMethod() const override
     {
-        return mtd;
+        return mtd_;
     }
 
     virtual const char* getHeader(const char*) const override
@@ -58,7 +60,7 @@ class TestRequest : public HttpRequest
         return nullptr;
     }
 
-    TestRequest(HttpMethod mtd, const std::string p) : mtd(mtd), path(p) {}
+    TestRequest(HttpMethod mtd, const std::string p) : mtd_(mtd), path_(p) {}
 
     virtual ~TestRequest() {}
 

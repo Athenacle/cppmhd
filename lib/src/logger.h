@@ -15,10 +15,10 @@ CPPMHD_NAMESPACE_BEGIN
 
 namespace log
 {
-extern std::atomic<uint8_t> level;
+extern std::atomic<LogLevel> level;
 extern std::shared_ptr<AbstractLogger> logInstance;
 
-inline uint8_t getLevel()
+inline LogLevel getLevel()
 {
     return level;
 }

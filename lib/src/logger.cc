@@ -23,14 +23,14 @@ using namespace cppmhd::log;
 #define DG "\033[90m"
 #define RESET "\033[0m"
 #else
-#define RED 
-#define FATAL 
-#define GREEN 
+#define RED
+#define FATAL
+#define GREEN
 #define YELLOW
-#define BLUE 
-#define MAGENTA 
-#define DIM 
-#define LG 
+#define BLUE
+#define MAGENTA
+#define DIM
+#define LG
 #define DG
 #define RESET
 #endif
@@ -55,18 +55,18 @@ void SimpleSTDOUTLogger::output(enum LogLevel lv, const char*, const char* func,
     };
 #ifdef NDEBUG
     if (lv >= getLevel()) {
-        auto level = lv;
-        if (level > kError) {
+        uint8_t ln = lv;
+        if (ln > kError) {
             LOG_WARN("invalid LogLevel {}. Assume as kInfo", level);
 
             level = kInfo;
         }
 #else
     if (lv >= getLevel() && lv <= LV_DTRACE) {
-        auto level = lv;
+        uint8_t ln = lv;
 #endif
         auto all = fmt::format(
-            "{:%Y-%m-%d %H:%M:%S} {} [{}:{}] {}\n", fmt::localtime(time(nullptr)), lvStr[level], func, line, message);
+            "{:%Y-%m-%d %H:%M:%S} {} [{}:{}] {}\n", fmt::localtime(time(nullptr)), lvStr[ln], func, line, message);
 
         mutex.lock();
         fprintf(stdout, "%s", all.c_str());
@@ -81,7 +81,7 @@ void SimpleSTDOUTLogger::fflush()
 
 SimpleSTDOUTLogger::~SimpleSTDOUTLogger() {}
 
-std::atomic<uint8_t> level
+std::atomic<LogLevel> level
 #ifndef NDEBUG
     (LogLevel::kTrace);
 #else

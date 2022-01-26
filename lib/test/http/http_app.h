@@ -46,7 +46,7 @@ struct ShaCalc {
 
     operator bool() const
     {
-        std::lock_guard<std::mutex> _(mutex);
+        std::lock_guard<std::mutex> lock(mutex);
         return finished;
     }
 
@@ -55,7 +55,7 @@ struct ShaCalc {
     std::string format() const;
 };
 
-bool calcFile(ShaCalc& calc, const std::string fullName);
+bool calcFile(ShaCalc& calc, const std::string& fullName);
 
 class TestCtrl : public HttpController
 {
@@ -85,15 +85,15 @@ class SimpleConnectionMock : public ActionInterface<void(HttpRequestPtr, HttpRes
 
 class SimpleRequestMock : public ActionInterface<void(HttpRequestPtr, HttpResponsePtr&)>
 {
-    HttpStatusCode code;
-    std::string body;
+    HttpStatusCode code_;
+    std::string body_;
 
   public:
     SimpleRequestMock() : SimpleRequestMock(k200OK) {}
 
     SimpleRequestMock(HttpStatusCode code) : SimpleRequestMock(code, "") {}
 
-    SimpleRequestMock(HttpStatusCode code, const std::string b) : code(code), body(b) {}
+    SimpleRequestMock(HttpStatusCode code, const std::string b) : code_(code), body_(b) {}
 
     ~SimpleRequestMock() = default;
 
@@ -102,11 +102,11 @@ class SimpleRequestMock : public ActionInterface<void(HttpRequestPtr, HttpRespon
     {
         auto& resp = std::get<1>(args);
         resp = std::make_shared<HttpResponse>();
-        if (body.length() > 0) {
+        if (body_.length() > 0) {
             resp->body("hello!");
             resp->header(CPPMHD_HTTP_HEADER_CONTENT_TYPE) = CPPMHD_HTTP_MIME_TEXT_PLAIN;
         }
-        resp->status(code);
+        resp->status(code_);
     }
 };
 
