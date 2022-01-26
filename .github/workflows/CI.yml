@@ -130,6 +130,14 @@ jobs:
       - name: "[All]-Build-Install"
         working-directory: ./build
         run: |
+          make VERBOSE=1
+        env:
+          VERBOSE: 1
+
+      - name: "[Linux]-Install"
+        working-directory: ./build
+        if: ${{  runner.os == 'Linux' }}
+        run: |
           sudo make install
         env:
           VERBOSE: 1
