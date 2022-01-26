@@ -99,7 +99,7 @@ jobs:
         shell: bash
         if: ${{ matrix.compiler == 'clang_64' && runner.os == 'macOS' }}
         run: |
-          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=OFF -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID }}  -DCMAKE_INSTALL_PREFIX=/usr
+          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=OFF -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DSANITIZE_UNDEFINED=ON -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID }}  -DCMAKE_INSTALL_PREFIX=/usr
         env:
           CC: clang
           CXX: clang++
@@ -111,7 +111,7 @@ jobs:
         if: ${{ matrix.compiler == 'clang_64' && runner.os == 'Linux' }}
         run: |
           sudo apt install clang-10
-          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCODE_COVERAGE=ON -DBUILD_TESTS=ON -DSANITIZE_ADDRESS=ON -DBUILD_SHARED=ON -DBUILD_STATIC=ON -DLLVM_COV_PATH=$(which llvm-cov-10) -DLLVM_PROFDATA_PATH=$(which llvm-profdata-10) -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID }}  -DCMAKE_INSTALL_PREFIX=/usr
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DCODE_COVERAGE=ON -DBUILD_TESTS=ON -DBUILD_SHARED=ON -DBUILD_STATIC=ON -DLLVM_COV_PATH=$(which llvm-cov-10) -DLLVM_PROFDATA_PATH=$(which llvm-profdata-10) -G 'Unix Makefiles' -DRUN_ID=${{ env.THIS_ID }}  -DCMAKE_INSTALL_PREFIX=/usr
         env:
           CC: clang-10
           CXX: clang++-10
@@ -127,7 +127,7 @@ jobs:
           CXX: g++10
           THIS_ID: ${{ env.RUN_ID }}-Linux-$GITHUB_RUN_NUMBER
 
-      - name: "[All]-Build-Install"
+      - name: "[All]-Build"
         working-directory: ./build
         run: |
           make VERBOSE=1
