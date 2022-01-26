@@ -24,7 +24,7 @@ class SHHandler : public ActionInterface<void(App &, int)>
         EXPECT_EQ(sigNo, this->sig);
     }
 
-    SHHandler(std::string &host, int sig) : h(host), sig(sig) {}
+    SHHandler(std::string &host, int sig_) : h(host), sig(sig_) {}
     virtual ~SHHandler() {}
 };
 
