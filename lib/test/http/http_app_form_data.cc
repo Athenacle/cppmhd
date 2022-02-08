@@ -6,17 +6,26 @@ class FormCtrl : public FormDataProcessorController
   public:
     ShaCalc file;
     ShaCalc random;
+    void* ptr;
     std::map<std::string, std::string> value;
 
     std::map<std::string, std::string> ct;
     std::map<std::string, std::string> te;
 
-    FormCtrl() = default;
+    FormCtrl(void* p)
+    {
+        ptr = p;
+    }
     virtual ~FormCtrl() {}
+
+    virtual void postConnection(HttpRequestPtr req) override
+    {
+        req->userdata(ptr);
+    }
 
     MOCK_METHOD((void), onRequest, (HttpRequestPtr, HttpResponsePtr&), (override));
 
-    virtual bool onData(HttpRequestPtr,
+    virtual bool onData(HttpRequestPtr req,
                         const std::string& keyName,
                         const std::string& fileName,
                         const std::string& contentType,
@@ -26,6 +35,8 @@ class FormCtrl : public FormDataProcessorController
                         size_t size,
                         bool finish) override
     {
+        EXPECT_EQ(req->userdata(), ptr);
+
         if (finish) {
             file.final();
             random.final();
@@ -46,12 +57,48 @@ class FormCtrl : public FormDataProcessorController
     }
 };
 
+
+class FormSimpleRequestMock : public ActionInterface<void(HttpRequestPtr, HttpResponsePtr&)>
+{
+    HttpStatusCode code_;
+    std::string body_;
+    void* ptr;
+
+  public:
+    FormSimpleRequestMock() : FormSimpleRequestMock(k200OK) {}
+
+    FormSimpleRequestMock(HttpStatusCode code) : FormSimpleRequestMock(code, "", nullptr) {}
+
+    FormSimpleRequestMock(HttpStatusCode code, const std::string b, void* p) : code_(code), body_(b)
+    {
+        ptr = p;
+    }
+
+    ~FormSimpleRequestMock() = default;
+
+
+    void Perform(const std::tuple<HttpRequestPtr, HttpResponsePtr&>& args)
+    {
+        auto& resp = std::get<1>(args);
+        auto& req = std::get<0>(args);
+        EXPECT_EQ(req->userdata(), ptr);
+        resp = std::make_shared<HttpResponse>();
+        if (body_.length() > 0) {
+            resp->body("hello!");
+            resp->header(CPPMHD_HTTP_HEADER_CONTENT_TYPE) = CPPMHD_HTTP_MIME_TEXT_PLAIN;
+        }
+        resp->status(code_);
+    }
+};
+
 TEST_F(HttpApp, formData)
 {
-    auto mock = add<FormCtrl>(HttpMethod::POST, myName);
+    auto mock = add<FormCtrl>(HttpMethod::POST, myName, this);
 
-    DEFAULT_MOCK_REQUEST_WITH_PARAMTER(mock, (k201Created, myName));
+
     DEFAULT_MOCK_REQUEST_TIMES(mock, 1);
+    ON_CALL(*mock, MOCK_CTRL(onRequest))
+        .WillByDefault(MakeAction(new FormSimpleRequestMock(k201Created, myName, this)));
 
     start();
     auto size = 4096 + rand() % 4096;
