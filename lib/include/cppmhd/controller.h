@@ -110,7 +110,10 @@ class FormDataProcessorController : public HttpController
   public:
     virtual void onConnection(HttpRequestPtr, HttpResponsePtr&) override final;
 
-    virtual bool onData(const std::string& keyName,
+    virtual void postConnection(HttpRequestPtr);
+
+    virtual bool onData(HttpRequestPtr,
+                        const std::string& keyName,
                         const std::string& fileName,
                         const std::string& contentType,
                         const std::string& transferEncoding,

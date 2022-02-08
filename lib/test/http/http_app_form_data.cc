@@ -16,7 +16,8 @@ class FormCtrl : public FormDataProcessorController
 
     MOCK_METHOD((void), onRequest, (HttpRequestPtr, HttpResponsePtr&), (override));
 
-    virtual bool onData(const std::string& keyName,
+    virtual bool onData(HttpRequestPtr,
+                        const std::string& keyName,
                         const std::string& fileName,
                         const std::string& contentType,
                         const std::string& transferEncoding,
