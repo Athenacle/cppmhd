@@ -8,7 +8,7 @@ on:
 
 env:
   BUILD_TYPE: Debug
-  RUN_ID: "0.0.2-ci-GitHubActions-$GITHUB_SHA"
+  RUN_ID: "0.0.3-ci-GitHubActions-$GITHUB_SHA"
 
 jobs:
   unix:
