@@ -1,4 +1,4 @@
-version: 0.0.2-{build}
+version: 0.0.3-{build}
 
 configuration:
   - Release
@@ -11,7 +11,7 @@ configuration:
 #    - /feature\/.*/
 
 environment:
-  RUN_ID: "0.0.2-ci-Appveyor-${APPVEYOR_REPO_COMMIT}-${PLATFORM}+$(APPVEYOR_BUILD_NUMBER)"
+  RUN_ID: "0.0.3-ci-Appveyor-${APPVEYOR_REPO_COMMIT}-${PLATFORM}+$(APPVEYOR_BUILD_NUMBER)"
   matrix:
     - GENERATOR: Visual Studio 14 2015
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
