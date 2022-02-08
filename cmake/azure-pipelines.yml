@@ -7,7 +7,7 @@ trigger:
   - feature/**
 
 variables:
-  RUN_ID: "0.0.2-ci-AzurePipelines-$(Build.SourceVersion)-$(Agent.OS)+$(Build.BuildNumber)"
+  RUN_ID: "0.0.3-ci-AzurePipelines-$(Build.SourceVersion)-$(Agent.OS)+$(Build.BuildNumber)"
 
 jobs:
   - job: macOS

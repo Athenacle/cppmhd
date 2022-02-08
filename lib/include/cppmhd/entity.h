@@ -18,10 +18,13 @@ class HttpRequest
     // for internal HttpRequest implement use.
     mutable MHD_Connection* conn_;
 
+    void* userdp_;
+
   protected:
     HttpRequest(MHD_Connection* conn) : conn_(conn)
     {
         dp_ = nullptr;
+        userdp_ = nullptr;
     }
 
   public:
@@ -29,6 +32,17 @@ class HttpRequest
     {
         dp_ = nullptr;
         conn_ = nullptr;
+        userdp_ = nullptr;
+    }
+
+    void userdata(void* data)
+    {
+        userdp_ = data;
+    }
+
+    void* userdata()
+    {
+        return userdp_;
     }
 
     MHD_Connection* connection() const

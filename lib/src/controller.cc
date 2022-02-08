@@ -23,12 +23,19 @@ DataProcessor::DataProcessor()
 {
     LOG_DTRACE("{} this = {}", "DataProcessor::DataProcessor", (void *)this);
 }
+
+
 namespace
 {
 using ccp = const char *;
 
 MHD_Return formIter(void *, MHD_ValueKind, ccp, ccp, ccp, ccp, ccp, uint64_t, size_t);
 
+class FormProcessor;
+struct FormProcessorData {
+    FormProcessor *proc;
+    HttpRequestPtr req;
+};
 
 class FormProcessor : public DataProcessor
 {
@@ -36,6 +43,7 @@ class FormProcessor : public DataProcessor
 
     MHD_Connection *conn_;
     MHD_PostProcessor *pp_;
+    FormProcessorData data_;
     FormDataProcessorController *ctrl_;
 
     std::string kN_, fN_, cT_, tE_;
@@ -48,11 +56,11 @@ class FormProcessor : public DataProcessor
         }
     }
 
-    virtual size_t onData(HttpRequestPtr &, const void *data, size_t size) override
+    virtual size_t onData(HttpRequestPtr &req, const void *data, size_t size) override
     {
         assert(pp_);
         if (unlikely(size == 0)) {
-            ctrl_->onData(kN_, fN_, cT_, tE_, nullptr, 0, 0, true);
+            ctrl_->onData(req, kN_, fN_, cT_, tE_, nullptr, 0, 0, true);
             return 0;
         } else {
             if (likely(MHD_post_process(pp_, reinterpret_cast<const char *>(data), size)) == MHD_OK) {
@@ -63,15 +71,19 @@ class FormProcessor : public DataProcessor
         }
     }
 
-    bool buildPostProcessor()
+    bool buildPostProcessor(HttpRequestPtr req)
     {
-        pp_ = MHD_create_post_processor(conn_, 20 * 1024, formIter, this);
+        data_.req = req;
+        pp_ = MHD_create_post_processor(conn_, 20 * 1024, formIter, &data_);
         return pp_ != nullptr;
     }
 
-    FormProcessor(MHD_Connection *conn, FormDataProcessorController *ctrl) : conn_(conn), pp_(nullptr), ctrl_(ctrl) {}
+    FormProcessor(MHD_Connection *conn, FormDataProcessorController *ctrl) : conn_(conn), pp_(nullptr), ctrl_(ctrl)
+    {
+        data_.proc = this;
+    }
 
-    bool onData(ccp key, ccp fN, ccp cT, ccp tE, ccp data, uint64_t off, size_t size)
+    bool onData(HttpRequestPtr &req, ccp key, ccp fN, ccp cT, ccp tE, ccp data, uint64_t off, size_t size)
     {
         if (key && kN_ != key) {
             kN_ = key;
@@ -86,7 +98,7 @@ class FormProcessor : public DataProcessor
             tE_ = tE;
         }
 
-        return ctrl_->onData(kN_, fN_, cT_, tE_, data, off, size, false);
+        return ctrl_->onData(req, kN_, fN_, cT_, tE_, data, off, size, false);
     }
 };
 
@@ -94,12 +106,14 @@ class FormProcessor : public DataProcessor
 MHD_Return formIter(
     void *cls, MAYBE_UNUSED MHD_ValueKind kind, ccp key, ccp fN, ccp cT, ccp tE, ccp data, uint64_t off, size_t size)
 {
-    MAYBE_UNUSED auto fp = reinterpret_cast<FormProcessor *>(cls);
+    MAYBE_UNUSED auto fp = reinterpret_cast<FormProcessorData *>(cls);
     assert(kind == MHD_POSTDATA_KIND);
-    return fp->onData(key, fN, cT, tE, data, off, size) ? MHD_OK : MHD_FAILED;
+    return fp->proc->onData(fp->req, key, fN, cT, tE, data, off, size) ? MHD_OK : MHD_FAILED;
 }
 
 }  // namespace
+
+void FormDataProcessorController::postConnection(HttpRequestPtr) {}
 
 void FormDataProcessorController::onConnection(HttpRequestPtr req, HttpResponsePtr &)
 {
@@ -109,9 +123,10 @@ void FormDataProcessorController::onConnection(HttpRequestPtr req, HttpResponseP
         if (isPrefixOfArray(ct, CPPMHD_HTTP_MIME_APPLICATION_FORM_URLENCODED)
             || isPrefixOfArray(ct, CPPMHD_HTTP_MIME_MULTIPART_FORM_DATA)) {
             auto fp = new FormProcessor(conn, this);
-            if (fp->buildPostProcessor()) {
+            if (fp->buildPostProcessor(req)) {
                 pp = std::shared_ptr<DataProcessor>(fp);
                 req->setProcessor(pp);
+                postConnection(req);
             } else {
                 delete fp;
             }
