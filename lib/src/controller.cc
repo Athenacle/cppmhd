@@ -34,7 +34,7 @@ MHD_Return formIter(void *, MHD_ValueKind, ccp, ccp, ccp, ccp, ccp, uint64_t, si
 class FormProcessor;
 struct FormProcessorData {
     FormProcessor *proc;
-    HttpRequestPtr req;
+    std::weak_ptr<HttpRequest> req;
 };
 
 class FormProcessor : public DataProcessor
@@ -108,7 +108,8 @@ MHD_Return formIter(
 {
     MAYBE_UNUSED auto fp = reinterpret_cast<FormProcessorData *>(cls);
     assert(kind == MHD_POSTDATA_KIND);
-    return fp->proc->onData(fp->req, key, fN, cT, tE, data, off, size) ? MHD_OK : MHD_FAILED;
+    auto req = fp->req.lock();
+    return fp->proc->onData(req, key, fN, cT, tE, data, off, size) ? MHD_OK : MHD_FAILED;
 }
 
 }  // namespace

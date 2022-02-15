@@ -144,7 +144,7 @@ void Curl::setup()
     CURL_PROCESS(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteDataCB));
     CURL_PROCESS(curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, curlHeaderCB));
     CURL_PROCESS(curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, ""));
-    setTimeout(std::chrono::seconds(3));
+    setTimeout(std::chrono::seconds(10));
 }
 
 const void *Curl::upload(size_t &size)

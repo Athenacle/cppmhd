@@ -125,6 +125,8 @@ struct cppmhd_delete {
     }
 };
 
+int cppmhd_version();
+const char* cppmhd_version_string();
 
 #define CPPMHD_HTTP_HEADER_ACCEPT_CHARSET "Accept-Charset"
 #define CPPMHD_HTTP_HEADER_ACCEPT_ENCODING "Accept-Encoding"
