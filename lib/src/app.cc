@@ -14,6 +14,16 @@
 
 using namespace cppmhd;
 
+int cppmhd_version()
+{
+    return PROJECT_VERSION_HEX;
+}
+
+const char* cppmhd_version_string()
+{
+    return PROJECT_VERSION_STRING;
+}
+
 namespace
 {
 void* (*mallocFn)(size_t) = std::malloc;

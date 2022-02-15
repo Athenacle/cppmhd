@@ -6,7 +6,7 @@ project(${PROJECT_NAME})
 
 set(MAJOR_VERSION 0)
 set(MINOR_VERSION 0)
-set(PATCH_VERSION 3)
+set(PATCH_VERSION 4)
 set(PROJECT_VERSION "${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}")
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/)
@@ -18,6 +18,7 @@ include(Dependency)
 
 option(BUILD_SHARED "Shared" ON)
 option(BUILD_STATIC "Static" ON)
+option(BUILD_PIC_STATIC "" OFF)
 
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")

@@ -38,6 +38,12 @@ if (BUILD_SHARED)
     endif ()
 endif ()
 
+if (BUILD_PIC_STATIC)
+    add_library(PICstatic STATIC ${MHDSRC})
+    set_target_properties(PICstatic PROPERTIES POSITION_INDEPENDENT_CODE ON OUTPUT_NAME cppmhdPIC)
+    set(LIBS ${LIBS} PICstatic)
+endif ()
+
 if (NOT TARGET cppmhd::lib)
     message(FATAL_ERROR "BUILD_SHARED and BUILD_STATIC must set at least one")
 endif ()
