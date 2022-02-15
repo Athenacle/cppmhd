@@ -18,6 +18,7 @@ include(Dependency)
 
 option(BUILD_SHARED "Shared" ON)
 option(BUILD_STATIC "Static" ON)
+option(BUILD_PIC_STATIC "" OFF)
 
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
